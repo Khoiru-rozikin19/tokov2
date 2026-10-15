@@ -5,12 +5,6 @@
     "ast_hash": "5a834ae95bb6e19eb0758a4d728f74dc",
     "semantic_hash": "5a834ae95bb6e19eb0758a4d728f74dc"
   },
-  "app/Console/Commands/SendTournamentMatchReminders.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912264,
-    "ast_hash": "3803740bfe395005a86b70ce959b171a",
-    "semantic_hash": "3803740bfe395005a86b70ce959b171a"
-  },
   "app/Console/Commands/TestTelegramCommand.php": {
     "mtime": 1784275109.0,
     "seen": 1792021194.9122698,
@@ -18,10 +12,10 @@
     "semantic_hash": "50b436b1fd22bc440a145fef37b028e2"
   },
   "app/Http/Controllers/AdminController.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9122732,
-    "ast_hash": "6d1033a4da285a7c1e36f3ba8eeb6389",
-    "semantic_hash": "6d1033a4da285a7c1e36f3ba8eeb6389"
+    "mtime": 1792042376.8852577,
+    "seen": 1792042474.1119642,
+    "ast_hash": "e17e668774074ba701c903cf8b42ce15",
+    "semantic_hash": "e17e668774074ba701c903cf8b42ce15"
   },
   "app/Http/Controllers/AuthController.php": {
     "mtime": 1784275109.0,
@@ -72,16 +66,10 @@
     "semantic_hash": "4a9a2f2af50bcb02581873e1d59720da"
   },
   "app/Http/Controllers/TelegramWebhookController.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912298,
-    "ast_hash": "98360c41fbb78fb62241fb6430698d38",
-    "semantic_hash": "98360c41fbb78fb62241fb6430698d38"
-  },
-  "app/Http/Controllers/TournamentController.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123008,
-    "ast_hash": "5d03f67051eb9a1a600dbb018f70126e",
-    "semantic_hash": "5d03f67051eb9a1a600dbb018f70126e"
+    "mtime": 1792042162.75072,
+    "seen": 1792042474.111997,
+    "ast_hash": "b6b5b4f056792fa64ab581cb93c232aa",
+    "semantic_hash": "b6b5b4f056792fa64ab581cb93c232aa"
   },
   "app/Http/Controllers/XlToolController.php": {
     "mtime": 1784275109.0,
@@ -161,41 +149,11 @@
     "ast_hash": "9a1a6a26888f5e5e9b7c4f496e84ccf5",
     "semantic_hash": "9a1a6a26888f5e5e9b7c4f496e84ccf5"
   },
-  "app/Models/Tournament.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123366,
-    "ast_hash": "34023229090404fa4aa888760e392e77",
-    "semantic_hash": "34023229090404fa4aa888760e392e77"
-  },
-  "app/Models/TournamentMatch.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123394,
-    "ast_hash": "b5579241b8af2f92c5bf5bbb7145fda4",
-    "semantic_hash": "b5579241b8af2f92c5bf5bbb7145fda4"
-  },
-  "app/Models/TournamentParticipant.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912342,
-    "ast_hash": "dc77115d2272e377f0c2cbc11e14a904",
-    "semantic_hash": "dc77115d2272e377f0c2cbc11e14a904"
-  },
-  "app/Models/TournamentPointsHistory.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123442,
-    "ast_hash": "16bc51cb1e84081fb7a7aae47a7c135f",
-    "semantic_hash": "16bc51cb1e84081fb7a7aae47a7c135f"
-  },
-  "app/Models/TournamentRegistration.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123466,
-    "ast_hash": "b686d43c705391f99a95524a15f88b75",
-    "semantic_hash": "b686d43c705391f99a95524a15f88b75"
-  },
   "app/Models/User.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9123492,
-    "ast_hash": "9c457e9a4b6b22fd863307588ab62a59",
-    "semantic_hash": "9c457e9a4b6b22fd863307588ab62a59"
+    "mtime": 1792042176.6979437,
+    "seen": 1792042474.1120448,
+    "ast_hash": "0fba798a033c87cfbba5df2b652ef860",
+    "semantic_hash": "0fba798a033c87cfbba5df2b652ef860"
   },
   "app/Models/UserBalance.php": {
     "mtime": 1784275109.0,
@@ -246,10 +204,10 @@
     "semantic_hash": "99cd2a73ce6fb45282902383ffe8ef48"
   },
   "app/Services/TelegramService.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912372,
-    "ast_hash": "4beefa64a57f0362677655f4efe25cb9",
-    "semantic_hash": "4beefa64a57f0362677655f4efe25cb9"
+    "mtime": 1792042134.397861,
+    "seen": 1792042474.1120725,
+    "ast_hash": "3ae5bc255cae0ed5dce148b190419e88",
+    "semantic_hash": "3ae5bc255cae0ed5dce148b190419e88"
   },
   "app/Services/VpsSshService.php": {
     "mtime": 1784275109.0,
@@ -575,35 +533,11 @@
     "ast_hash": "f25936a6c82876663748ce649343a068",
     "semantic_hash": "f25936a6c82876663748ce649343a068"
   },
-  "database/migrations/2026_07_12_114000_create_tournament_system_tables.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125142,
-    "ast_hash": "3d25bf64c0973ee41c92108b4c7d1e1a",
-    "semantic_hash": "3d25bf64c0973ee41c92108b4c7d1e1a"
-  },
-  "database/migrations/2026_07_14_120335_add_team_mode_to_tournaments_table.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912517,
-    "ast_hash": "1fe2df49dc377fe4684859253ce0f1a7",
-    "semantic_hash": "1fe2df49dc377fe4684859253ce0f1a7"
-  },
   "database/migrations/2026_07_16_142034_add_whatsapp_otp_to_users_table.php": {
     "mtime": 1784275109.0,
     "seen": 1792021194.9125195,
     "ast_hash": "4363bd87e7bff32b12384846a6f4b1fe",
     "semantic_hash": "4363bd87e7bff32b12384846a6f4b1fe"
-  },
-  "database/migrations/2026_07_17_130500_add_scheduling_and_match_fields_to_tournament_tables.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125226,
-    "ast_hash": "7d9753741e4fdd7cef9bcccf0583d93b",
-    "semantic_hash": "7d9753741e4fdd7cef9bcccf0583d93b"
-  },
-  "database/migrations/2026_07_17_150000_split_match_reports_columns.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125257,
-    "ast_hash": "e92133f60b98845d74805c992413ddad",
-    "semantic_hash": "e92133f60b98845d74805c992413ddad"
   },
   "database/seeders/DatabaseSeeder.php": {
     "mtime": 1784275109.0,
@@ -695,12 +629,6 @@
     "ast_hash": "b0b962df0afb47f94076e17bf1d74220",
     "semantic_hash": "b0b962df0afb47f94076e17bf1d74220"
   },
-  "resources/views/admin/tournaments.blade.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912567,
-    "ast_hash": "55dbdfaab1d0150cc2209b13aa429212",
-    "semantic_hash": "55dbdfaab1d0150cc2209b13aa429212"
-  },
   "resources/views/admin/transactions.blade.php": {
     "mtime": 1784275109.0,
     "seen": 1792021194.9125693,
@@ -720,10 +648,10 @@
     "semantic_hash": "d7c8f50bc8c64b77e6f77d7f4cad9cf8"
   },
   "resources/views/admin/whatsapp.blade.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125774,
-    "ast_hash": "9fa2bdac1f141e00fec5be15857bd9b1",
-    "semantic_hash": "9fa2bdac1f141e00fec5be15857bd9b1"
+    "mtime": 1792042119.615199,
+    "seen": 1792042474.1123445,
+    "ast_hash": "55ee490bd0f62fbf1ebe2a1bf31bc3a4",
+    "semantic_hash": "55ee490bd0f62fbf1ebe2a1bf31bc3a4"
   },
   "resources/views/auth/verify-otp.blade.php": {
     "mtime": 1784275109.0,
@@ -744,10 +672,10 @@
     "semantic_hash": "3bde944fa8653ab02b6d77132db90fd2"
   },
   "resources/views/layouts/app.blade.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125874,
-    "ast_hash": "a87a755049db5fac0d25e44ce7352d4d",
-    "semantic_hash": "a87a755049db5fac0d25e44ce7352d4d"
+    "mtime": 1792042097.5749168,
+    "seen": 1792042474.1123576,
+    "ast_hash": "b9728937cf8545405293e218e57017c0",
+    "semantic_hash": "b9728937cf8545405293e218e57017c0"
   },
   "resources/views/orders/history.blade.php": {
     "mtime": 1784275109.0,
@@ -761,18 +689,6 @@
     "ast_hash": "fd0c9dd582db5bab0f6931a9ea9d7384",
     "semantic_hash": "fd0c9dd582db5bab0f6931a9ea9d7384"
   },
-  "resources/views/tournaments/index.blade.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125953,
-    "ast_hash": "7087c2e32d980c46f0ea307e69a8d375",
-    "semantic_hash": "7087c2e32d980c46f0ea307e69a8d375"
-  },
-  "resources/views/tournaments/show.blade.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9125981,
-    "ast_hash": "7caed06d2b944852a5cb7ac209e5be51",
-    "semantic_hash": "7caed06d2b944852a5cb7ac209e5be51"
-  },
   "resources/views/welcome.blade.php": {
     "mtime": 1784275109.0,
     "seen": 1792021194.9126003,
@@ -780,16 +696,16 @@
     "semantic_hash": "1a03818ea91deb4f3989c6c994e5867c"
   },
   "routes/console.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.912603,
-    "ast_hash": "1735844df439f115a148629dc301d7d9",
-    "semantic_hash": "1735844df439f115a148629dc301d7d9"
+    "mtime": 1792042072.8310075,
+    "seen": 1792042474.1123707,
+    "ast_hash": "7a0640ccb99c70938e532bed386d9318",
+    "semantic_hash": "7a0640ccb99c70938e532bed386d9318"
   },
   "routes/web.php": {
-    "mtime": 1784275109.0,
-    "seen": 1792021194.9126058,
-    "ast_hash": "6967cdc533cb47279b86b6867cf6caf2",
-    "semantic_hash": "6967cdc533cb47279b86b6867cf6caf2"
+    "mtime": 1792042058.1840353,
+    "seen": 1792042474.1123734,
+    "ast_hash": "54df5beb0aef92ee3454de9d6a68b4ac",
+    "semantic_hash": "54df5beb0aef92ee3454de9d6a68b4ac"
   },
   "scratch_test.php": {
     "mtime": 1784275109.0,
@@ -928,5 +844,11 @@
     "seen": 1792021194.9126756,
     "ast_hash": "20d561a8ffee8d45ff69c024bd276fac",
     "semantic_hash": "20d561a8ffee8d45ff69c024bd276fac"
+  },
+  "database/migrations/2026_07_18_000000_drop_tournament_system_tables.php": {
+    "mtime": 1792042397.2372365,
+    "seen": 1792042474.11228,
+    "ast_hash": "84978976889c643de3e42e2e3c00e18e",
+    "semantic_hash": "84978976889c643de3e42e2e3c00e18e"
   }
 }

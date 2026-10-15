@@ -147,14 +147,6 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                             <span>Riwayat Pesanan</span>
                         </a>
-                        <a href="{{ route('tournaments.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('tournaments.index') || request()->is('tournaments/*') ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 border-l-4 border-orange-500 font-bold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <!-- Trophy Icon -->
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v5m-3 0h6M4 11a4 4 0 014-4h8a4 4 0 014 4M6 5h12M10 9h4"></path>
-                            </svg>
-                            <span>Turnamen Event</span>
-                            <span class="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider animate-pulse ml-auto">HOT</span>
-                        </a>
                     </div>
                 </div>
 
@@ -206,12 +198,6 @@
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-13.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-16.5 0a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a3 3 0 013-3h13.5a3 3 0 013 3M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75"></path></svg>
                                     <span>VPN Panel</span>
                                 </a>
-                                <a href="{{ route('admin.tournaments') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.tournaments') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v5m-3 0h6M4 11a4 4 0 014-4h8a4 4 0 014 4M6 5h12M10 9h4"></path>
-                                    </svg>
-                                    <span>Kelola Turnamen</span>
-                                </a>
                                 <a href="{{ route('admin.whatsapp') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.whatsapp') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
                                     <span>Bot WhatsApp</span>
@@ -244,16 +230,6 @@
                 </div>
 
                 <div class="flex items-center space-x-2 sm:space-x-4">
-                    <!-- Header Event Button -->
-                    <a href="{{ route('tournaments.index') }}" class="relative group bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center space-x-1 shadow-md shadow-orange-500/20 hover:scale-[1.03] active:scale-95 transition-all duration-250 text-xs sm:text-sm font-bold overflow-hidden" title="Event Turnamen">
-                        <span class="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-shine"></span>
-                        <!-- Trophy Icon -->
-                        <svg class="w-4 h-4 text-amber-300 animate-bounce" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                        </svg>
-                        <span class="hidden sm:inline">EVENT 🏆</span>
-                        <span class="sm:hidden">🏆</span>
-                    </a>
 
                     <!-- Light / Dark Mode Toggle -->
                     <button id="themeToggle" class="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200">

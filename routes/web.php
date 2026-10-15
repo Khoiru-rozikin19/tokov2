@@ -35,9 +35,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::get('/', [CatalogController::class, 'index'])->name('catalog');
 Route::get('/catalog', [CatalogController::class, 'index']);
 
-// Public Tournament Event Routes
-Route::get('/tournaments', [App\Http\Controllers\TournamentController::class, 'index'])->name('tournaments.index');
-Route::get('/tournaments/{id}', [App\Http\Controllers\TournamentController::class, 'show'])->name('tournaments.show');
 
 
 // Rute Terkunci (Wajib Login & Terverifikasi - Semua Peran)
@@ -45,9 +42,6 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     
     // User Frontend Routes
     Route::post('/buy', [CatalogController::class, 'buy'])->name('buy');
-    Route::post('/tournaments/{id}/register', [App\Http\Controllers\TournamentController::class, 'register'])->name('tournaments.register');
-    Route::post('/tournaments/matches/{id}/room', [App\Http\Controllers\TournamentController::class, 'updateRoomCredentials'])->name('tournaments.matches.update_room');
-    Route::post('/tournaments/matches/{id}/report', [App\Http\Controllers\TournamentController::class, 'reportMatchScore'])->name('tournaments.matches.report_score');
     Route::get('/orders', [CatalogController::class, 'history'])->name('orders.history');
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
     Route::get('/orders/{id}/download', [CatalogController::class, 'download'])->name('order.download');
@@ -131,15 +125,6 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/commissions/{id}/delete', [AdminController::class, 'deleteCommission'])->name('commissions.delete');
         Route::post('/commissions/{id}/toggle', [AdminController::class, 'toggleCommission'])->name('commissions.toggle');
 
-        // Kelola Turnamen Event
-        Route::get('/tournaments', [AdminController::class, 'tournaments'])->name('tournaments');
-        Route::post('/tournaments', [AdminController::class, 'storeTournament'])->name('tournaments.store');
-        Route::post('/tournaments/{id}/update-status', [AdminController::class, 'updateTournamentStatus'])->name('tournaments.update_status');
-        Route::post('/tournaments/registrations/{id}/approve', [AdminController::class, 'approveRegistration'])->name('tournaments.approve_registration');
-        Route::post('/tournaments/registrations/{id}/reject', [AdminController::class, 'rejectRegistration'])->name('tournaments.reject_registration');
-        Route::post('/tournaments/matches/{id}/score', [AdminController::class, 'updateMatchScore'])->name('tournaments.update_match_score');
-        Route::post('/tournaments/matches/{id}/remind', [AdminController::class, 'remindMatchCaptains'])->name('tournaments.matches.remind');
-        Route::post('/tournaments/{id}/delete', [AdminController::class, 'deleteTournament'])->name('tournaments.delete');
 
         // Admin Tools - Cek & Reset Kuota XL
         Route::prefix('tools/xl')->name('tools.xl.')->group(function () {

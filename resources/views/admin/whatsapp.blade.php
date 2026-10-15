@@ -5,7 +5,7 @@
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <p class="text-sm text-slate-550 dark:text-slate-400">Hubungkan nomor WhatsApp khusus Anda dan atur alur OTP & notifikasi turnamen.</p>
+        <p class="text-sm text-slate-550 dark:text-slate-400">Hubungkan nomor WhatsApp khusus Anda dan atur alur OTP & notifikasi toko.</p>
     </div>
 
     @if(session('success'))
@@ -95,7 +95,7 @@
                     <div class="space-y-1.5">
                         <label for="whatsapp_bot_group_id" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">ID Grup WhatsApp (Tujuan Broadcast)</label>
                         <input type="text" id="whatsapp_bot_group_id" name="whatsapp_bot_group_id" value="{{ $groupId }}" placeholder="Contoh: 120363025555555555@g.us atau ID grup Anda" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
-                        <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Gunakan ID grup lengkap berakhiran <code>@g.us</code>. Bot akan mem-broadcast update pendaftaran & status turnamen ke grup ini.</p>
+                        <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Gunakan ID grup lengkap berakhiran <code>@g.us</code>. Bot akan mem-broadcast update dan status ke grup ini.</p>
                     </div>
 
                     <!-- API URL Gateway -->
