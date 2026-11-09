@@ -124,16 +124,19 @@ if curl -fsSLI "https://ppa.launchpadcontent.net/ondrej/php/ubuntu/dists/${CODEN
   apt update --allow-releaseinfo-change
 else
   echo -e "${KUNING}[INFO] PPA ondrej/php belum menyediakan rilis untuk Ubuntu '${CODENAME}'. Menggunakan paket PHP resmi bawaan Ubuntu...${NC}"
+  add-apt-repository universe -y 2>/dev/null || true
+  apt update --allow-releaseinfo-change
 fi
 
 # 4. Pasang Web Server Nginx & PHP
 echo -e "\n${KUNING}Langkah 3: Memasang Nginx & PHP-FPM beserta modul...${NC}"
-if apt-cache show php8.3 &>/dev/null; then
+if apt-cache policy php8.3 2>/dev/null | grep -qE "Candidate:\s+[0-9]"; then
   PHP_PKG="php8.3"
 else
   PHP_PKG="php"
 fi
 
+echo -e "${BIRU}Memasang paket ${PHP_PKG} dan ekstensi yang dibutuhkan...${NC}"
 apt install -y nginx ${PHP_PKG} ${PHP_PKG}-fpm ${PHP_PKG}-cli ${PHP_PKG}-mysql ${PHP_PKG}-sqlite3 ${PHP_PKG}-mbstring ${PHP_PKG}-xml ${PHP_PKG}-curl ${PHP_PKG}-bcmath ${PHP_PKG}-zip
 
 PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
@@ -174,8 +177,12 @@ if ! [ -x "$(command -v composer)" ]; then
 fi
 
 if ! [ -x "$(command -v node)" ]; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt install -y nodejs
+  if curl -fsSL https://deb.nodesource.com/setup_20.x | bash -; then
+    apt install -y nodejs
+  else
+    echo -e "${KUNING}[WARNING] NodeSource gagal, memasang nodejs & npm bawaan Ubuntu...${NC}"
+    apt install -y nodejs npm
+  fi
 fi
 
 # 7. Setup Environment Laravel (.env)
