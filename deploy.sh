@@ -96,31 +96,48 @@ if command -v ufw &>/dev/null; then
   ufw reload
 fi
 
+# Bersihkan file repository PPA ondrej yang mungkin error dari eksekusi sebelumnya
+rm -f /etc/apt/sources.list.d/*ondrej* 2>/dev/null || true
+
 apt update --allow-releaseinfo-change && apt upgrade -y
 apt install -y software-properties-common curl git unzip nano gnupg2 ca-certificates lsb-release apt-transport-https
 
-# Coba daftarkan PPA Ondrej PHP
-if ! add-apt-repository ppa:ondrej/php -y; then
-  echo -e "${KUNING}[WARNING] add-apt-repository gagal (koneksi timeout). Mencoba menambahkan PPA secara manual...${NC}"
-  
-  mkdir -p /etc/apt/keyrings
-  
-  # Ambil key dari keyserver hkp port 80 (biasanya lolos firewall)
-  if ! gpg --no-default-keyring --keyring /etc/apt/keyrings/ondrej-php.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 14AA40EC0831756756D7F66C4F4EA0AAE5267A6C; then
-    echo -e "${KUNING}[WARNING] Gagal mengambil key dari keyserver. Mengunduh via HTTPS...${NC}"
-    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x14AA40EC0831756756D7F66C4F4EA0AAE5267A6C" | gpg --dearmor -o /etc/apt/keyrings/ondrej-php.gpg
+# Dapatkan codename OS secara dinamis (misal: noble, jammy, resolute, dll.)
+CODENAME=$(lsb_release -sc)
+
+# Cek apakah PPA Ondrej PHP sudah memiliki Release untuk codename Ubuntu saat ini
+if curl -fsSLI "https://ppa.launchpadcontent.net/ondrej/php/ubuntu/dists/${CODENAME}/Release" &>/dev/null; then
+  echo -e "${BIRU}Mendaftarkan PPA ondrej/php untuk Ubuntu ${CODENAME}...${NC}"
+  if ! add-apt-repository ppa:ondrej/php -y; then
+    echo -e "${KUNING}[WARNING] add-apt-repository gagal. Mencoba menambahkan PPA secara manual...${NC}"
+    rm -f /etc/apt/sources.list.d/*ondrej* 2>/dev/null || true
+    mkdir -p /etc/apt/keyrings
+
+    # Ambil key dari keyserver hkp port 80 (biasanya lolos firewall)
+    if ! gpg --no-default-keyring --keyring /etc/apt/keyrings/ondrej-php.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 14AA40EC0831756756D7F66C4F4EA0AAE5267A6C; then
+      echo -e "${KUNING}[WARNING] Gagal mengambil key dari keyserver. Mengunduh via HTTPS...${NC}"
+      curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x14AA40EC0831756756D7F66C4F4EA0AAE5267A6C" | gpg --dearmor --yes -o /etc/apt/keyrings/ondrej-php.gpg
+    fi
+
+    echo "deb [signed-by=/etc/apt/keyrings/ondrej-php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu ${CODENAME} main" | tee /etc/apt/sources.list.d/ondrej-php.list
   fi
-  
-  # Dapatkan codename OS secara dinamis (misal: noble, jammy, dll.)
-  CODENAME=$(lsb_release -sc)
-  echo "deb [signed-by=/etc/apt/keyrings/ondrej-php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu ${CODENAME} main" | tee /etc/apt/sources.list.d/ondrej-php.list
+  apt update --allow-releaseinfo-change
+else
+  echo -e "${KUNING}[INFO] PPA ondrej/php belum menyediakan rilis untuk Ubuntu '${CODENAME}'. Menggunakan paket PHP resmi bawaan Ubuntu...${NC}"
 fi
 
-apt update --allow-releaseinfo-change
+# 4. Pasang Web Server Nginx & PHP
+echo -e "\n${KUNING}Langkah 3: Memasang Nginx & PHP-FPM beserta modul...${NC}"
+if apt-cache show php8.3 &>/dev/null; then
+  PHP_PKG="php8.3"
+else
+  PHP_PKG="php"
+fi
 
-# 4. Pasang Web Server Nginx & PHP 8.3
-echo -e "\n${KUNING}Langkah 3: Memasang Nginx & PHP 8.3 FPM beserta modul...${NC}"
-apt install -y nginx php8.3 php8.3-fpm php8.3-cli php8.3-mysql php8.3-sqlite3 php8.3-mbstring php8.3-xml php8.3-curl php8.3-bcmath php8.3-zip
+apt install -y nginx ${PHP_PKG} ${PHP_PKG}-fpm ${PHP_PKG}-cli ${PHP_PKG}-mysql ${PHP_PKG}-sqlite3 ${PHP_PKG}-mbstring ${PHP_PKG}-xml ${PHP_PKG}-curl ${PHP_PKG}-bcmath ${PHP_PKG}-zip
+
+PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+echo -e "${HIJAU}PHP versi ${PHP_VER} berhasil terpasang (service: php${PHP_VER}-fpm).${NC}"
 
 # 5. Pasang & Konfigurasi MySQL Server
 echo -e "\n${KUNING}Langkah 4: Memasang & mengamankan MySQL Server...${NC}"
@@ -303,7 +320,7 @@ server {
     error_page 404 /index.php;
 
     location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/var/run/php/php${PHP_VER}-fpm.sock;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
@@ -347,7 +364,7 @@ env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root || true
 # Restart Nginx dan PHP-FPM di akhir untuk memastikan izin akses dan konfigurasi baru dimuat sepenuhnya
 echo -e "\n${KUNING}Langkah Akhir: Merestart Nginx & PHP-FPM...${NC}"
 systemctl restart nginx
-systemctl restart php8.3-fpm
+systemctl restart php${PHP_VER}-fpm
 
 # Selesai
 echo -e "\n${HIJAU}======================================================================"
