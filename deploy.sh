@@ -387,6 +387,10 @@ pm2 save
 # Mengaktifkan PM2 auto-startup
 env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root || true
 
+# Daftarkan Cron Job Laravel Scheduler (untuk sinkron otomatis OKEConnect tiap 5 menit & rilis escrow)
+echo -e "${BIRU}Mendaftarkan Cron Job Laravel Scheduler (sinkron otomatis tiap 5 menit)...${NC}"
+(crontab -l 2>/dev/null | grep -v "artisan schedule:run"; echo "* * * * * cd ${APP_DIR} && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -
+
 # Restart Nginx dan PHP-FPM di akhir untuk memastikan izin akses dan konfigurasi baru dimuat sepenuhnya
 echo -e "\n${KUNING}Langkah Akhir: Merestart Nginx & PHP-FPM...${NC}"
 systemctl restart nginx

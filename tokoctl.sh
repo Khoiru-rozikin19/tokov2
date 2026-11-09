@@ -226,9 +226,10 @@ show_dashboard() {
     echo -e "    [9] 📊  Kelola Riwayat Transaksi"
     echo -e "    [10] ❌  Uninstall Website (Hapus Total Website)"
     echo -e "    [11] 🌐  Ganti Domain"
+    echo -e "    [12] ⏱️  Sinkronisasi Otomatis OKEConnect (Cron 5 Menit)"
     echo -e "    [0] 🚪  Keluar dari Panel"
     print_border
-    echo -n "Pilih menu [0-11]: "
+    echo -n "Pilih menu [0-12]: "
 }
 
 # =====================================================================
@@ -575,14 +576,16 @@ update_website() {
         chmod -R 775 "$APP_DIR/bootstrap/cache"
     fi
 
-    # 7. Restart Queue Worker
-    echo -e "\n${YELLOW}Langkah 7: Merestart queue worker...${NC}"
+    # 7. Restart Queue Worker & Pastikan Cron Scheduler Aktif
+    echo -e "\n${YELLOW}Langkah 7: Merestart queue worker & memeriksa Cron Scheduler...${NC}"
     php artisan queue:restart
     if command -v pm2 &> /dev/null; then
         print_info "Merestart queue worker di PM2..."
         pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$APP_DIR"
         pm2 save
     fi
+    (crontab -l 2>/dev/null | grep -v "artisan schedule:run"; echo "* * * * * cd $APP_DIR && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -
+    print_success "Cron Scheduler (sinkron otomatis tiap 5 menit) telah diaktifkan."
 
     # Tampilkan commit terbaru secara estetis
     echo
@@ -1023,6 +1026,14 @@ show_services_status() {
         fi
     else
         echo -e "  ${YELLOW}●${NC} PM2 Status: ${YELLOW}Tidak terpasang di VPS (Queue worker tidak berjalan)${NC}"
+    fi
+
+    echo
+    echo -e "${BOLD}${WHITE}Jadwal Otomatis (Cron Scheduler OKEConnect):${NC}"
+    if crontab -l 2>/dev/null | grep -q "artisan schedule:run"; then
+        echo -e "  ${GREEN}●${NC} Sinkron Otomatis (5 Menit): ${BOLD}${GREEN}Active (Terdaftar di Crontab)${NC}"
+    else
+        echo -e "  ${RED}●${NC} Sinkron Otomatis (5 Menit): ${BOLD}${RED}Inactive (Belum diaktifkan di Menu 12)${NC}"
     fi
     echo
 }
@@ -2890,6 +2901,59 @@ EOT
     print_border
 }
 
+# =====================================================================
+#  MENU 12: Sinkronisasi Otomatis OKEConnect (Cron 5 Menit)
+# =====================================================================
+manage_auto_sync() {
+    while true; do
+        echo
+        print_border
+        echo -e "      ${BOLD}${BLUE}⏱️   SINKRONISASI OTOMATIS OKECONNECT (CRON 5 MENIT)   ⏱️${NC}"
+        print_border
+
+        if crontab -l 2>/dev/null | grep -q "artisan schedule:run"; then
+            echo -e "  Status Saat Ini : ${BOLD}${GREEN}● AKTIF (Berjalan Otomatis Tiap 5 Menit)${NC}"
+            echo -e "  Entri Crontab   : ${DIM}$(crontab -l 2>/dev/null | grep 'artisan schedule:run')${NC}"
+        else
+            echo -e "  Status Saat Ini : ${BOLD}${RED}● TIDAK AKTIF${NC}"
+        fi
+
+        print_border
+        echo -e "  ${BOLD}${WHITE}Pilih Aksi:${NC}"
+        echo -e "    [1] 🟢  Aktifkan Sinkronisasi Otomatis (Pasang Crontab)"
+        echo -e "    [2] 🔴  Nonaktifkan Sinkronisasi Otomatis (Hapus Crontab)"
+        echo -e "    [3] ⚡  Tes Sinkronisasi Sekarang (Jalankan Manual)"
+        echo -e "    [0] 🔙  Kembali ke Dashboard Utama"
+        print_border
+        echo -n "Pilih aksi [0-3]: "
+        read sub_sync
+        echo
+
+        case "$sub_sync" in
+            1)
+                print_info "Mendaftarkan jadwal sinkronisasi otomatis ke Crontab..."
+                (crontab -l 2>/dev/null | grep -v "artisan schedule:run"; echo "* * * * * cd $PROJECT_DIR && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -
+                print_success "Sinkronisasi otomatis setiap 5 menit berhasil diaktifkan!"
+                ;;
+            2)
+                print_info "Menghapus jadwal sinkronisasi otomatis dari Crontab..."
+                crontab -l 2>/dev/null | grep -v "artisan schedule:run" | crontab - 2>/dev/null || true
+                print_success "Sinkronisasi otomatis berhasil dinonaktifkan."
+                ;;
+            3)
+                print_info "Menjalankan sinkronisasi produk dari OKEConnect sekarang..."
+                (cd "$PROJECT_DIR" && php artisan products:sync-okeconnect)
+                ;;
+            0)
+                break
+                ;;
+            *)
+                print_warning "Pilihan tidak valid. Silakan pilih [0-3]."
+                ;;
+        esac
+    done
+}
+
 
 # =====================================================================
 #  INISIALISASI & LOOP MENU UTAMA
@@ -2939,12 +3003,15 @@ while true; do
         11)
             change_domain
             ;;
+        12)
+            manage_auto_sync
+            ;;
         0)
             print_info "Keluar dari panel pengelola VPS. Sampai jumpa!"
             exit 0
             ;;
         *)
-            print_warning "Pilihan tidak valid. Silakan pilih menu [0-11]."
+            print_warning "Pilihan tidak valid. Silakan pilih menu [0-12]."
             ;;
     esac
     
