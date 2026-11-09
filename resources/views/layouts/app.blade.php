@@ -109,9 +109,9 @@
                 </button>
             </div>
 
-            <!-- Profile Widget -->
+            <!-- Profile Widget (Desktop Only - Mobile moved to Bottom Nav) -->
             @if(Auth::check())
-                <a href="{{ route('profile.edit') }}" class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-205">
+                <a href="{{ route('profile.edit') }}" class="hidden md:flex p-5 border-b border-slate-100 dark:border-slate-800 items-center space-x-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-205">
                     <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20 flex-shrink-0">
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                     </div>
@@ -125,7 +125,7 @@
                     </div>
                 </a>
             @else
-                <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
+                <div class="hidden md:flex p-5 border-b border-slate-100 dark:border-slate-800 items-center space-x-4">
                     <div class="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-lg flex-shrink-0">
                         G
                     </div>
@@ -142,8 +142,8 @@
 
             <!-- Sidebar Nav Items -->
             <div id="sidebarMenu" class="flex-1 overflow-y-auto px-3 py-5 space-y-6">
-                <!-- BELANJA -->
-                <div>
+                <!-- BELANJA (Desktop Only - Mobile moved to Bottom Nav) -->
+                <div class="hidden md:block">
                     <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Belanja</span>
                     <div class="mt-2 space-y-1">
                         <a href="{{ url('/catalog') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->is('catalog') || request()->is('/') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
@@ -228,11 +228,20 @@
             
             <!-- TOP NAVBAR -->
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-16 px-5 md:px-8 flex items-center justify-between sticky top-0 z-20 transition-all duration-200">
-                <div class="flex items-center space-x-4">
-                    <!-- Sidebar Toggle for Mobile -->
-                    <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
+                <div class="flex items-center space-x-3 sm:space-x-4">
+                    @if(Auth::check() && (Auth::user()->role === 'admin' || Auth::user()->role === 'seller'))
+                        <!-- Sidebar Toggle for Mobile (Admin/Seller Portal) -->
+                        <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" aria-label="Buka Menu">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                    @else
+                        <!-- Mobile Brand Icon (Buyer/Guest) -->
+                        <a href="{{ url('/') }}" class="md:hidden bg-blue-600 p-1.5 rounded-xl text-white flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                        </a>
+                    @endif
                     <h1 class="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 header-title" title="{{ $title ?? 'Dashboard' }}">{{ $title ?? 'Dashboard' }}</h1>
                 </div>
 
@@ -277,20 +286,54 @@
             </main>
 
             <!-- FOOTER -->
-            <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 px-8 text-center text-sm text-slate-400 dark:text-slate-500 transition-all duration-200">
+            <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pt-5 pb-24 md:py-5 px-8 text-center text-sm text-slate-400 dark:text-slate-500 transition-all duration-200">
                 &copy; {{ date('Y') }} RZK Platform. Built for premium performance & security.
             </footer>
         </div>
     </div>
 
-    <!-- Floating Telegram Support Button -->
-    <a href="https://t.me/yourusername" target="_blank" class="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-full flex items-center space-x-2.5 shadow-xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all duration-200 text-sm font-bold">
-        <!-- Telegram SVG -->
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-2.03 1.28-5.74 3.79-.54.37-1.03.55-1.47.54-.48-.01-1.4-.27-2.08-.5-.83-.27-1.49-.42-1.43-.88.03-.24.37-.49 1.02-.75 3.99-1.74 6.66-2.88 7.99-3.43 3.8-1.57.79-.17 1.77.16.03.22.04.45.03.68z"/>
-        </svg>
-        <span>Bantuan</span>
-    </a>
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav aria-label="Navigasi Utama Mobile" class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+        <div class="grid grid-cols-3 h-16 max-w-md mx-auto">
+            <!-- 1. Home (Katalog Produk) -->
+            @php
+                $isHomeActive = request()->is('catalog') || request()->is('/');
+                $isHistoryActive = request()->routeIs('orders.history');
+                $isProfileActive = request()->routeIs('profile.*');
+            @endphp
+            <a href="{{ url('/catalog') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isHomeActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                @if($isHomeActive)
+                    <span class="absolute top-0 inset-x-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-b-full"></span>
+                @endif
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="{{ $isHomeActive ? '2.25' : '2' }}" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span>Home</span>
+            </a>
+
+            <!-- 2. Riwayat (Riwayat Pesanan) -->
+            <a href="{{ Auth::check() ? route('orders.history') : route('login') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isHistoryActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                @if($isHistoryActive)
+                    <span class="absolute top-0 inset-x-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-b-full"></span>
+                @endif
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="{{ $isHistoryActive ? '2.25' : '2' }}" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+                <span>Riwayat</span>
+            </a>
+
+            <!-- 3. Akun -->
+            <a href="{{ Auth::check() ? route('profile.edit') : route('login') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isProfileActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                @if($isProfileActive)
+                    <span class="absolute top-0 inset-x-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-b-full"></span>
+                @endif
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="{{ $isProfileActive ? '2.25' : '2' }}" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span>Akun</span>
+            </a>
+        </div>
+    </nav>
 
     <!-- Global Theme Switcher & Mobile Menu JS -->
     <script>
