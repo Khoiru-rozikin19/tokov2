@@ -228,48 +228,65 @@ class OrderkuotaService
             ];
         }
 
-        $priceListId = Setting::get('orderkuota_price_list_id') ?: '905ccd028329b0a';
-        $url = "https://okeconnect.com/harga/list?id=" . $priceListId;
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(60);
+
+        $rawPriceListId = trim((string) (Setting::get('orderkuota_price_list_id') ?: '905ccd028329b0a'));
+        // Jika pengguna memasukkan URL lengkap (misal https://okeconnect.com/harga/list?id=905ccd028329b0a), ekstrak parameter id-nya
+        if (preg_match('/[?&]id=([a-zA-Z0-9_-]+)/', $rawPriceListId, $idMatches)) {
+            $priceListId = $idMatches[1];
+        } else {
+            $priceListId = $rawPriceListId;
+        }
+
+        $jsonUrl = "https://okeconnect.com/harga/json?id=" . urlencode($priceListId);
+        $htmlUrl = "https://okeconnect.com/harga/list?id=" . urlencode($priceListId);
 
         try {
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 30,
+                    'timeout' => 25,
                     'ignore_errors' => true,
                     'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
                 ]
             ]);
-            $html = @file_get_contents($url, false, $context);
-
-            if (empty($html)) {
-                Log::error("OrderkuotaService: Gagal mengambil data dari URL {$url}");
-                return [
-                    'success' => false,
-                    'message' => 'Gagal mengunduh halaman daftar harga dari OKEConnect.'
-                ];
-            }
-
-            // Gunakan DOMDocument untuk mem-parsing HTML
-            $dom = new \DOMDocument();
-            // Matikan warning HTML5 invalid tag
-            libxml_use_internal_errors(true);
-            $dom->loadHTML($html);
-            libxml_clear_errors();
-
-            $xpath = new \DOMXPath($dom);
-            // Cari seluruh element table row
-            $rows = $xpath->query('//table//tr');
 
             $statuses = [];
-            foreach ($rows as $row) {
-                $cols = $row->getElementsByTagName('td');
-                if ($cols->length >= 4) {
-                    $code = trim($cols->item(0)->textContent);
-                    $statusText = strtolower(trim($cols->item(3)->textContent));
 
-                    if (!empty($code)) {
-                        $status = (strpos($statusText, 'open') !== false) ? 'open' : 'close';
-                        $statuses[$code] = $status;
+            // 1. Prioritaskan endpoint JSON resmi Okeconnect (~1.2 MB vs ~13.8 MB HTML, jauh lebih cepat & hemat RAM)
+            $jsonBody = @file_get_contents($jsonUrl, false, $context);
+            if (!empty($jsonBody)) {
+                $decoded = json_decode($jsonBody, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $item) {
+                        $code = isset($item['kode']) ? trim((string) $item['kode']) : '';
+                        if ($code !== '') {
+                            $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
+                            $statuses[$code] = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
+                        }
+                    }
+                }
+            }
+
+            // 2. Fallback ke halaman HTML dengan Regex ringan (tanpa DOMDocument agar tidak kehabisan memori pada ribuan produk)
+            if (empty($statuses)) {
+                $html = @file_get_contents($htmlUrl, false, $context);
+
+                if (empty($html)) {
+                    Log::error("OrderkuotaService: Gagal mengambil data dari URL {$jsonUrl} maupun {$htmlUrl}");
+                    return [
+                        'success' => false,
+                        'message' => 'Gagal mengunduh daftar harga dari OKEConnect.'
+                    ];
+                }
+
+                if (preg_match_all('/<tr[^>]*>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>.*?<\/td>\s*<td[^>]*>.*?<\/td>\s*<td[^>]*>(.*?)<\/td>/is', $html, $matches, PREG_SET_ORDER)) {
+                    foreach ($matches as $match) {
+                        $code = trim(strip_tags($match[1]));
+                        $statusText = strtolower(trim(strip_tags($match[2])));
+                        if ($code !== '') {
+                            $statuses[$code] = (strpos($statusText, 'open') !== false || $statusText === '1') ? 'open' : 'close';
+                        }
                     }
                 }
             }
@@ -278,7 +295,7 @@ class OrderkuotaService
                 Log::warning("OrderkuotaService: Tidak ada data produk yang berhasil di-parsing.");
                 return [
                     'success' => false,
-                    'message' => 'Format tabel harga tidak dikenali atau kosong.'
+                    'message' => 'Format daftar harga OKEConnect tidak dikenali atau kosong.'
                 ];
             }
 
@@ -289,7 +306,7 @@ class OrderkuotaService
 
             $updatedCount = 0;
             foreach ($products as $product) {
-                $code = $product->orderkuota_product_code;
+                $code = trim($product->orderkuota_product_code);
                 if (isset($statuses[$code])) {
                     $supplierStatus = $statuses[$code];
                     if ($product->status !== $supplierStatus) {
@@ -306,12 +323,12 @@ class OrderkuotaService
 
             return [
                 'success' => true,
-                'message' => "Sinkronisasi berhasil. Memproses " . count($statuses) . " kode, memperbarui {$updatedCount} status produk.",
+                'message' => "Sinkronisasi berhasil. Memproses " . count($statuses) . " kode dari OKEConnect, memperbarui {$updatedCount} status produk.",
                 'total_parsed' => count($statuses),
                 'updated' => $updatedCount
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("OrderkuotaService: Error sinkronisasi produk: " . $e->getMessage());
             return [
                 'success' => false,
