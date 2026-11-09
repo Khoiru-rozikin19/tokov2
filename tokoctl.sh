@@ -489,8 +489,10 @@ update_website() {
     php artisan view:cache
 
     # 5. Build Aset Frontend Baru dengan Fallback
-    echo -e "\n${YELLOW}Langkah 5: Memasang paket npm & melakukan build aset Vite...${NC}"
-    if [ -f "package.json" ]; then
+    echo -e "\n${YELLOW}Langkah 5: Memeriksa aset frontend Vite...${NC}"
+    if [ -f "public/build/manifest.json" ]; then
+        print_success "Aset frontend (public/build/manifest.json) sudah tersedia dari repository. Melewati npm install & build!"
+    elif [ -f "package.json" ]; then
         if [ -d "node_modules" ]; then
             chmod -R 777 node_modules &>/dev/null || true
         fi
@@ -1477,7 +1479,9 @@ restore_website() {
         fi
     fi
 
-    if [ -f "package.json" ]; then
+    if [ -f "public/build/manifest.json" ]; then
+        print_success "Aset frontend (public/build/manifest.json) sudah tersedia."
+    elif [ -f "package.json" ]; then
         if command -v npm &>/dev/null; then
             npm install --no-audit --no-fund || true
             npm run build || npx vite build || true
