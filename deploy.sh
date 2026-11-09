@@ -80,9 +80,22 @@ sysctl -w net.ipv6.conf.default.disable_ipv6=1 &>/dev/null || true
 sysctl -w net.ipv6.conf.lo.disable_ipv6=1 &>/dev/null || true
 echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
 
-# Membuka port yang dibutuhkan (80 & 443) jika belum terbuka
-echo -e "${BIRU}Membuka port 80 & 443 di Firewall...${NC}"
+# Buat Swap 2GB otomatis jika VPS belum memiliki Swap (mencegah VPS RAM 1GB macet/hang)
+if [ "$(swapon --show | wc -l)" -eq 0 ]; then
+  echo -e "${BIRU}Membuat Swap Memory 2GB agar VPS tidak kehabisan RAM...${NC}"
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  chmod 600 /swapfile
+  mkswap /swapfile &>/dev/null
+  swapon /swapfile &>/dev/null || true
+  if ! grep -q '/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+fi
+
+# Membuka port yang dibutuhkan (22, 80 & 443) jika belum terbuka
+echo -e "${BIRU}Membuka port 22 (SSH), 80 & 443 di Firewall...${NC}"
 if command -v iptables &>/dev/null; then
+  iptables -I INPUT 1 -p tcp --dport 22 -j ACCEPT
   iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
   iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
   if command -v netfilter-persistent &>/dev/null; then
@@ -91,6 +104,7 @@ if command -v iptables &>/dev/null; then
 fi
 
 if command -v ufw &>/dev/null; then
+  ufw allow 22/tcp
   ufw allow 80/tcp
   ufw allow 443/tcp
   ufw reload
