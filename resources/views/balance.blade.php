@@ -32,7 +32,7 @@
         
         <div class="relative z-10 space-y-1">
             <span class="text-xs uppercase tracking-widest text-blue-200/80 font-bold">Total Saldo Saat Ini</span>
-            <h2 class="text-xl sm:text-2xl font-bold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h2>
+            <h2 id="currentBalanceDisplay" class="text-xl sm:text-2xl font-bold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h2>
             <span class="text-xs text-blue-100/75 block">Akun: {{ auth()->user()->name }}</span>
         </div>
         
@@ -289,23 +289,33 @@
             </div>
 
             <!-- Step 3: Success Animation -->
-            <div id="topupStepSuccess" class="p-8 text-center space-y-6 hidden">
-                <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-md">
-                    <svg class="w-10 h-10 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                    </svg>
+            <div id="topupStepSuccess" class="p-6 sm:p-8 text-center space-y-6 hidden">
+                <div class="pt-2">
+                    <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-100 dark:ring-emerald-950/50">
+                        <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
                 </div>
                 
                 <div class="space-y-2">
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">Top Up Sukses!</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                        Dana telah didepositkan ke akun Anda secara otomatis. Saldo Anda sekarang bertambah!
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        Terverifikasi Otomatis
+                    </span>
+                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Pembayaran Sukses!</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        Top up saldo Anda telah berhasil diverifikasi dan saldo sudah ditambahkan ke akun Anda.
                     </p>
                 </div>
 
-                <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <button type="button" onclick="reloadBalancePage()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl transition shadow-lg shadow-emerald-500/10">
-                        Selesai & Muat Ulang Halaman
+                <div class="p-4 bg-emerald-50/70 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 space-y-1">
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium block">Saldo Ditambahkan</span>
+                    <p id="topupSuccessAmount" class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">+Rp 0</p>
+                </div>
+
+                <div class="pt-2">
+                    <button type="button" onclick="finishTopupAndClose()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold rounded-2xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2">
+                        <span>Lanjut Belanja</span>
                     </button>
                 </div>
             </div>
@@ -318,8 +328,10 @@
     let topupPollInterval = null;
     let topupCountdownInterval = null;
     let topupActiveOrderId = null;
+    let topupIsCompleted = false;
 
     function openTopupModal() {
+        topupIsCompleted = false;
         // Reset steps view
         document.getElementById('topupStepInput').classList.remove('hidden');
         document.getElementById('topupStepPayment').classList.add('hidden');
@@ -336,6 +348,14 @@
         // Clear timers if they were running
         if (topupPollInterval) clearInterval(topupPollInterval);
         if (topupCountdownInterval) clearInterval(topupCountdownInterval);
+
+        if (topupIsCompleted) {
+            window.location.reload();
+        }
+    }
+
+    function finishTopupAndClose() {
+        closeTopupModal();
     }
 
     function setPresetAmount(amount) {
@@ -466,24 +486,43 @@
         topupPollInterval = setInterval(() => {
             if (!topupActiveOrderId) return;
             
-            fetch(`/balance/topup/${topupActiveOrderId}/status`)
+            fetch(`/balance/topup/${topupActiveOrderId}/status`, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid') {
+                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
+                    topupIsCompleted = true;
                     clearInterval(topupPollInterval);
                     clearInterval(topupCountdownInterval);
+
+                    if (data.formatted_base_amount) {
+                        const successAmountEl = document.getElementById('topupSuccessAmount');
+                        if (successAmountEl) {
+                            successAmountEl.innerText = '+' + data.formatted_base_amount;
+                        }
+                    }
+
+                    if (data.formatted_balance) {
+                        const balanceDisplayEl = document.getElementById('currentBalanceDisplay');
+                        if (balanceDisplayEl) {
+                            balanceDisplayEl.innerText = data.formatted_balance;
+                        }
+                    }
                     
+                    document.getElementById('topupStepInput').classList.add('hidden');
                     document.getElementById('topupStepPayment').classList.add('hidden');
                     document.getElementById('topupStepSuccess').classList.remove('hidden');
-                } else if (data.status === 'expired') {
+                } else if (data.status === 'expired' || data.status === 'ditolak' || data.status === 'rejected') {
                     clearInterval(topupPollInterval);
                     clearInterval(topupCountdownInterval);
-                    alert('Batas waktu pembayaran telah habis. Silakan buat permintaan top up baru.');
+                    alert('Tagihan top up telah kedaluwarsa atau dibatalkan. Silakan buat permintaan top up baru.');
                     closeTopupModal();
                 }
             })
             .catch(err => console.error("Error polling topup status:", err));
-        }, 4000); // Poll every 4 seconds
+        }, 2500); // Poll every 2.5 seconds
     }
 
     function reloadBalancePage() {

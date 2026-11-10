@@ -178,8 +178,14 @@ class BalanceController extends Controller
                 ->update(['status' => 'failed']);
         }
 
+        $currentBalance = auth()->user()->getBalance();
+
         return response()->json([
             'status' => $order->status,
+            'base_amount' => $order->base_amount,
+            'formatted_base_amount' => 'Rp ' . number_format($order->base_amount, 0, ',', '.'),
+            'current_balance' => $currentBalance,
+            'formatted_balance' => 'Rp ' . number_format($currentBalance, 0, ',', '.'),
         ]);
     }
 
