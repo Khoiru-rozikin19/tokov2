@@ -391,6 +391,15 @@ env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root || true
 echo -e "${BIRU}Mendaftarkan Cron Job Laravel Scheduler (sinkron otomatis tiap 5 menit)...${NC}"
 (crontab -l 2>/dev/null | grep -v "artisan schedule:run"; echo "* * * * * cd ${APP_DIR} && /usr/bin/php artisan schedule:run >> /dev/null 2>&1") | crontab -
 
+# Daftarkan Webhook Telegram secara otomatis menggunakan kredensial default di .env
+echo -e "${BIRU}Mendaftarkan Webhook Bot Telegram untuk https://${SUBDOMAIN}/webhook/telegram...${NC}"
+TG_TOKEN=$(grep "^TELEGRAM_BOT_TOKEN=" "$APP_DIR/.env" | cut -d'=' -f2- | tr -d '"'\''')
+TG_BASE=$(grep "^TELEGRAM_API_BASE=" "$APP_DIR/.env" | cut -d'=' -f2- | tr -d '"'\''')
+TG_BASE=${TG_BASE:-https://api.telegram.org}
+if [ -n "$TG_TOKEN" ]; then
+  curl -s -k "${TG_BASE}/bot${TG_TOKEN}/setWebhook?url=https://${SUBDOMAIN}/webhook/telegram" >/dev/null 2>&1 || true
+fi
+
 # Restart Nginx dan PHP-FPM di akhir untuk memastikan izin akses dan konfigurasi baru dimuat sepenuhnya
 echo -e "\n${KUNING}Langkah Akhir: Merestart Nginx & PHP-FPM...${NC}"
 systemctl restart nginx

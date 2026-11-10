@@ -228,7 +228,7 @@ class CatalogController extends Controller
                 } elseif ($order && !app()->runningUnitTests()) {
                     try {
                         $telegramService = app(\App\Services\TelegramService::class);
-                        $adminId = env('TELEGRAM_ADMIN_ID');
+                        $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
                         if ($adminId) {
                             $formattedAmount = number_format($order->total_amount, 0, ',', '.');
                             $productName = $product->name ?? 'Produk';

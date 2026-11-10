@@ -59,7 +59,7 @@ class TelegramWebhookController extends Controller
             $this->telegramService->useAdminToken();
         }
 
-        $adminId = env('TELEGRAM_ADMIN_ID');
+        $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
 
         // Intercept user registration actions
         if (in_array($action, ['user_approve', 'user_reject'])) {
@@ -137,7 +137,7 @@ class TelegramWebhookController extends Controller
             ], 404);
         }
 
-        $adminId = env('TELEGRAM_ADMIN_ID');
+        $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
 
         // Security check
         if (in_array($action, ['approve', 'reject', 'cancel_preorder'])) {

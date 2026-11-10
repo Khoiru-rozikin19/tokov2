@@ -49,7 +49,7 @@ class PaymentCallbackController extends Controller
             Log::info("PaymentCallback: Ping test callback received.");
             try {
                 $telegramService = app(\App\Services\TelegramService::class);
-                $adminId = env('TELEGRAM_ADMIN_ID');
+                $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
                 if ($adminId) {
                     $telegramService->sendMessage($adminId, "test ping app callback berhasil ✅");
                 } else {
@@ -254,7 +254,7 @@ class PaymentCallbackController extends Controller
                     if ($order->telegram_message_id) {
                         try {
                             $telegramService = app(\App\Services\TelegramService::class);
-                            $adminId = env('TELEGRAM_ADMIN_ID');
+                            $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
                             $formattedAmount = number_format($order->total_amount, 0, ',', '.');
                             $customerName = $order->email_or_whatsapp;
 

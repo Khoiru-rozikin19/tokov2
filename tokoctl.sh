@@ -482,6 +482,34 @@ update_website() {
         print_warning "Gagal memvalidasi akun Admin: $ADMIN_STATUS"
     fi
 
+    # Pastikan konfigurasi default Telegram Bot selalu tersedia di .env
+    if [ -f ".env" ]; then
+        local cur_tg_token=$(grep "^TELEGRAM_BOT_TOKEN=" .env | cut -d'=' -f2- | tr -d '"'\''')
+        local cur_tg_admin=$(grep "^TELEGRAM_ADMIN_ID=" .env | cut -d'=' -f2- | tr -d '"'\''')
+        local cur_tg_base=$(grep "^TELEGRAM_API_BASE=" .env | cut -d'=' -f2- | tr -d '"'\''')
+
+        if [ -z "$cur_tg_token" ]; then
+            sed -i "/^TELEGRAM_BOT_TOKEN=/d" .env
+            echo "TELEGRAM_BOT_TOKEN=8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY" >> .env
+            cur_tg_token="8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY"
+        fi
+        if [ -z "$cur_tg_admin" ]; then
+            sed -i "/^TELEGRAM_ADMIN_ID=/d" .env
+            echo "TELEGRAM_ADMIN_ID=6515967618" >> .env
+            cur_tg_admin="6515967618"
+        fi
+        if [ -z "$cur_tg_base" ]; then
+            sed -i "/^TELEGRAM_API_BASE=/d" .env
+            echo "TELEGRAM_API_BASE=https://api.telegram.org" >> .env
+            cur_tg_base="https://api.telegram.org"
+        fi
+
+        local cur_app_url=$(grep "^APP_URL=" .env | cut -d'=' -f2- | tr -d '"'\''' | sed 's:/*$::')
+        if [ -n "$cur_app_url" ] && [[ "$cur_app_url" == https://* ]]; then
+            curl -s -k "${cur_tg_base}/bot${cur_tg_token}/setWebhook?url=${cur_app_url}/webhook/telegram" >/dev/null 2>&1 || true
+        fi
+    fi
+
     # 4. Bersihkan & Optimalkan Cache Laravel
     echo -e "\n${YELLOW}Langkah 4: Melakukan caching konfigurasi, rute, dan view Laravel...${NC}"
     php artisan optimize:clear
@@ -1387,6 +1415,9 @@ restore_website() {
         local new_db_user=$(grep "^DB_USERNAME=" "$temp_env" | cut -d'=' -f2-)
         local new_db_pass=$(grep "^DB_PASSWORD=" "$temp_env" | cut -d'=' -f2-)
         local new_app_url=$(grep "^APP_URL=" "$temp_env" | cut -d'=' -f2-)
+        local new_tg_token=$(grep "^TELEGRAM_BOT_TOKEN=" "$temp_env" | cut -d'=' -f2-)
+        local new_tg_admin=$(grep "^TELEGRAM_ADMIN_ID=" "$temp_env" | cut -d'=' -f2-)
+        local new_tg_base=$(grep "^TELEGRAM_API_BASE=" "$temp_env" | cut -d'=' -f2-)
 
         [ -n "$new_db_conn" ] && update_env_value "DB_CONNECTION" "$new_db_conn"
         [ -n "$new_db_host" ] && update_env_value "DB_HOST" "$new_db_host"
@@ -1395,6 +1426,9 @@ restore_website() {
         [ -n "$new_db_user" ] && update_env_value "DB_USERNAME" "$new_db_user"
         [ -n "$new_db_pass" ] && update_env_value "DB_PASSWORD" "$new_db_pass"
         [ -n "$new_app_url" ] && update_env_value "APP_URL" "$new_app_url"
+        [ -n "$new_tg_token" ] && update_env_value "TELEGRAM_BOT_TOKEN" "$new_tg_token"
+        [ -n "$new_tg_admin" ] && update_env_value "TELEGRAM_ADMIN_ID" "$new_tg_admin"
+        [ -n "$new_tg_base" ] && update_env_value "TELEGRAM_API_BASE" "$new_tg_base"
         
         rm -f "$temp_env"
     fi
@@ -1633,16 +1667,18 @@ setting_bot_token_admin() {
     echo -e "      ${BOLD}${BLUE}🤖   SETTING BOT TOKEN & ID TELEGRAM ADMIN   🤖${NC}"
     print_border
     
-    local old_token=""
-    local old_admin=""
+    local old_token="8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY"
+    local old_admin="6515967618"
     local old_domain=""
     local old_api_base="https://api.telegram.org"
     
     if [ -f ".env" ]; then
-        old_token=$(grep "^TELEGRAM_BOT_TOKEN=" .env | cut -d'=' -f2-)
-        old_admin=$(grep "^TELEGRAM_ADMIN_ID=" .env | cut -d'=' -f2-)
-        old_domain=$(grep "^APP_URL=" .env | cut -d'=' -f2- | sed -E 's|https?://||')
-        local env_api_base=$(grep "^TELEGRAM_API_BASE=" .env | cut -d'=' -f2-)
+        local env_token=$(grep "^TELEGRAM_BOT_TOKEN=" .env | cut -d'=' -f2- | tr -d '"'\''')
+        local env_admin=$(grep "^TELEGRAM_ADMIN_ID=" .env | cut -d'=' -f2- | tr -d '"'\''')
+        [ -n "$env_token" ] && old_token="$env_token"
+        [ -n "$env_admin" ] && old_admin="$env_admin"
+        old_domain=$(grep "^APP_URL=" .env | cut -d'=' -f2- | tr -d '"'\''' | sed -E 's|https?://||')
+        local env_api_base=$(grep "^TELEGRAM_API_BASE=" .env | cut -d'=' -f2- | tr -d '"'\''')
         [ -n "$env_api_base" ] && old_api_base="$env_api_base"
     fi
 

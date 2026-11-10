@@ -27,10 +27,10 @@ class TestTelegramCommand extends Command
      */
     public function handle()
     {
-        $token = env('TELEGRAM_BOT_TOKEN');
-        $sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN');
-        $adminId = env('TELEGRAM_ADMIN_ID');
-        $apiBase = env('TELEGRAM_API_BASE', 'https://api.telegram.org');
+        $token = env('TELEGRAM_BOT_TOKEN') ?: config('services.telegram.bot_token', '8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY');
+        $sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN') ?: config('services.telegram.seller_bot_token');
+        $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
+        $apiBase = env('TELEGRAM_API_BASE') ?: config('services.telegram.api_base', 'https://api.telegram.org');
 
         $this->info("=== TELEGRAM CONFIGURATION TEST ===");
         $this->line("TELEGRAM_BOT_TOKEN (Admin Bot): " . ($token ? substr($token, 0, 5) . '...' . substr($token, -5) : '[NOT SET]'));

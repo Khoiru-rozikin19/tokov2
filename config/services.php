@@ -49,4 +49,11 @@ return [
         'circle_msisdn_key' => env('MYXL_CIRCLE_MSISDN_KEY', ''),
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN', '8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY'),
+        'seller_bot_token' => env('TELEGRAM_SELLER_BOT_TOKEN'),
+        'admin_id' => env('TELEGRAM_ADMIN_ID', '6515967618'),
+        'api_base' => env('TELEGRAM_API_BASE', 'https://api.telegram.org'),
+    ],
+
 ];

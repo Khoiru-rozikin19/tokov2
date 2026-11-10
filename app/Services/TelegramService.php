@@ -15,11 +15,16 @@ class TelegramService
 
     public function __construct()
     {
-        $this->token = env('TELEGRAM_BOT_TOKEN');
-        $this->adminId = env('TELEGRAM_ADMIN_ID');
-        $this->apiBase = rtrim(env('TELEGRAM_API_BASE', 'https://api.telegram.org'), '/');
-        $this->sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN') ?: $this->token;
+        $this->token = env('TELEGRAM_BOT_TOKEN') ?: config('services.telegram.bot_token', '8991971343:AAEZxXGt-r9tJJH2a8t4sg5TkLIxNFFjXbY');
+        $this->adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
+        $this->apiBase = rtrim(env('TELEGRAM_API_BASE') ?: config('services.telegram.api_base', 'https://api.telegram.org'), '/');
+        $this->sellerToken = (env('TELEGRAM_SELLER_BOT_TOKEN') ?: config('services.telegram.seller_bot_token')) ?: $this->token;
         $this->currentToken = $this->token;
+    }
+
+    public function getAdminId()
+    {
+        return $this->adminId;
     }
 
     public function useAdminToken()
