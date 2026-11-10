@@ -1699,8 +1699,13 @@ setting_bot_token_admin() {
 
     print_success "Konfigurasi bot disimpan di .env!"
 
-    print_info "Clear cache konfigurasi Laravel..."
+    print_info "Clear cache konfigurasi Laravel & restart Queue Worker..."
     php artisan optimize:clear >/dev/null 2>&1
+    php artisan queue:restart >/dev/null 2>&1
+    if command -v pm2 &>/dev/null; then
+        pm2 restart vpn-queue-worker >/dev/null 2>&1 || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PROJECT_DIR" >/dev/null 2>&1
+        pm2 save >/dev/null 2>&1 || true
+    fi
 
     # Daftarkan webhook ke Telegram API
     print_info "Mendaftarkan Webhook ke Telegram API..."
@@ -1744,10 +1749,15 @@ configure_bot() {
                 setting_bot_token_admin
                 ;;
             2)
-                print_info "Membersihkan cache konfigurasi Laravel..."
+                print_info "Membersihkan cache konfigurasi Laravel & merestart Queue Worker..."
                 php artisan config:clear
                 php artisan optimize:clear
-                print_success "Cache konfigurasi berhasil dibersihkan!"
+                php artisan queue:restart
+                if command -v pm2 &>/dev/null; then
+                    pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PROJECT_DIR"
+                    pm2 save || true
+                fi
+                print_success "Cache konfigurasi berhasil dibersihkan & Queue Worker direstart!"
                 ;;
             3)
                 print_info "Menguji koneksi bot Telegram..."

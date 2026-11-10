@@ -225,6 +225,24 @@ class CatalogController extends Controller
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi pre-order ke Telegram: " . $e->getMessage());
                     }
+                } elseif ($order && !app()->runningUnitTests()) {
+                    try {
+                        $telegramService = app(\App\Services\TelegramService::class);
+                        $adminId = env('TELEGRAM_ADMIN_ID');
+                        if ($adminId) {
+                            $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+                            $productName = $product->name ?? 'Produk';
+                            $text = "✅ *Transaksi Saldo Sukses*\n\n"
+                                  . "📦 *ID Order:* `{$order->id}`\n"
+                                  . "🛍️ *Produk:* {$productName}\n"
+                                  . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                  . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n\n"
+                                  . "Pembayaran menggunakan *Saldo Akun* berhasil dan pesanan telah diproses otomatis.";
+                            $telegramService->sendMessage($adminId, $text);
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke Telegram: " . $e->getMessage());
+                    }
                 }
             } catch (\Exception $e) {
                 return response()->json([
@@ -303,8 +321,12 @@ class CatalogController extends Controller
             'expired_at' => Carbon::now()->addMinutes(30),
         ]);
 
-        // Kirim notifikasi ke Telegram Admin secara asynchronous via background queue
-        \App\Jobs\SendTelegramNotificationJob::dispatch($order->id, $order->total_amount, $order->email_or_whatsapp);
+        // Kirim notifikasi ke Telegram Admin (gunakan dispatchAfterResponse di production agar tidak bergantung pada daemon queue worker)
+        if (app()->runningUnitTests()) {
+            \App\Jobs\SendTelegramNotificationJob::dispatch($order->id, $order->total_amount, $order->email_or_whatsapp);
+        } else {
+            \App\Jobs\SendTelegramNotificationJob::dispatchAfterResponse($order->id, $order->total_amount, $order->email_or_whatsapp);
+        }
 
         return response()->json([
             'success' => true,
