@@ -35,27 +35,6 @@
         </div>
     @endif
 
-    <!-- Balance Card -->
-    <div class="rounded-3xl p-6 text-white shadow-xl shadow-blue-500/10 flex flex-col sm:flex-row sm:items-center sm:justify-between relative overflow-hidden border border-blue-500/10 dark:border-blue-400/20" style="background: linear-gradient(to bottom right, #2563eb, #4338ca);">
-        <!-- Background Decoration Circles -->
-        <div class="absolute -right-10 -top-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div class="absolute -left-15 -bottom-15 w-40 h-40 bg-blue-500/30 rounded-full blur-2xl pointer-events-none"></div>
-        
-        <div class="relative z-10">
-            <span class="text-xs uppercase tracking-widest text-blue-200/80 font-bold">Total Saldo Saya</span>
-            <h2 class="text-xl sm:text-2xl font-bold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h2>
-        </div>
-        
-        <div class="relative z-10 mt-5 sm:mt-0">
-            <a href="{{ route('balance.index') }}" class="inline-flex items-center space-x-2 px-5 py-3 bg-white text-blue-600 hover:bg-blue-50 transition-all font-bold rounded-2xl text-xs shadow-lg shadow-black/10 active:scale-95 duration-200">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
-                </svg>
-                <span>Isi Saldo & Riwayat</span>
-            </a>
-        </div>
-    </div>
-
     <!-- Account Details Form -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
         
