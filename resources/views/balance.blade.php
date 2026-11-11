@@ -79,12 +79,10 @@
 
     <!-- Toggle Buttons (Kiri: Riwayat Top Up Saldo | Kanan: Riwayat Penggunaan & Transfer Saldo) -->
     <div class="grid grid-cols-2 gap-2 sm:gap-3 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-        <button type="button" id="btnTabTopup" onclick="switchBalanceHistoryTab('topup')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 {{ ($activeSection ?? 'topup') === 'topup' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+        <button type="button" id="btnTabTopup" onclick="switchBalanceHistoryTab('topup')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center {{ ($activeSection ?? 'topup') === 'topup' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
             <span>Riwayat Top Up Saldo</span>
         </button>
-        <button type="button" id="btnTabUsage" onclick="switchBalanceHistoryTab('usage')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 {{ ($activeSection ?? 'topup') === 'usage' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+        <button type="button" id="btnTabUsage" onclick="switchBalanceHistoryTab('usage')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center {{ ($activeSection ?? 'topup') === 'usage' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
             <span>Riwayat Penggunaan & Transfer Saldo</span>
         </button>
     </div>
