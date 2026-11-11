@@ -64,6 +64,18 @@ class ProfileController extends Controller
     }
 
     /**
+     * Normalize phone number for comparison and WhatsApp sending (e.g., 628123456789).
+     */
+    private function normalizePhone(?string $phone): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', (string) $phone);
+        if (str_starts_with($digits, '0')) {
+            $digits = '62' . substr($digits, 1);
+        }
+        return $digits;
+    }
+
+    /**
      * Update the user profile.
      */
     public function update(Request $request)
@@ -86,7 +98,45 @@ class ProfileController extends Controller
             }
         }
 
-        DB::transaction(function () use ($user, $request) {
+        $newNormalizedPhone = $this->normalizePhone($request->phone);
+        $oldNormalizedPhone = $this->normalizePhone($user->phone);
+        $isPhoneChanged = $newNormalizedPhone !== $oldNormalizedPhone;
+
+        if ($isPhoneChanged) {
+            $inputOtp = trim((string) $request->input('phone_otp', ''));
+
+            if (empty($inputOtp)) {
+                return back()
+                    ->withErrors(['phone' => 'Perubahan nomor HP/WA memerlukan verifikasi kode OTP WhatsApp.'])
+                    ->withInput()
+                    ->with('open_section', 'menu')
+                    ->with('open_phone_otp_modal', true);
+            }
+
+            if (
+                empty($user->whatsapp_otp) ||
+                $user->whatsapp_otp !== $inputOtp ||
+                !$user->whatsapp_otp_expires_at ||
+                now()->greaterThan($user->whatsapp_otp_expires_at)
+            ) {
+                return back()
+                    ->withErrors(['phone' => 'Kode OTP WhatsApp tidak valid atau sudah kedaluwarsa.'])
+                    ->withInput()
+                    ->with('open_section', 'menu')
+                    ->with('open_phone_otp_modal', true);
+            }
+
+            $pendingPhone = session('pending_phone_change');
+            if (!empty($pendingPhone) && $pendingPhone !== $newNormalizedPhone) {
+                return back()
+                    ->withErrors(['phone' => 'Nomor WhatsApp yang dimasukkan berbeda dengan nomor yang dikirimkan OTP.'])
+                    ->withInput()
+                    ->with('open_section', 'menu')
+                    ->with('open_phone_otp_modal', true);
+            }
+        }
+
+        DB::transaction(function () use ($user, $request, $isPhoneChanged) {
             $user->name = $request->name;
             $user->email = $request->email;
             $user->phone = $request->phone;
@@ -100,11 +150,95 @@ class ProfileController extends Controller
             if ($request->filled('new_password')) {
                 $user->password = Hash::make($request->new_password);
             }
+
+            if ($isPhoneChanged) {
+                $user->whatsapp_otp = null;
+                $user->whatsapp_otp_expires_at = null;
+            }
             
             $user->save();
         });
 
+        if ($isPhoneChanged) {
+            session()->forget('pending_phone_change');
+        }
+
         return redirect()->route('profile.edit')->with('success', 'Profil Anda berhasil diperbarui.');
+    }
+
+    /**
+     * Send WhatsApp OTP when user wants to change phone/WA number.
+     */
+    public function sendPhoneChangeOtp(Request $request)
+    {
+        $user = Auth::user();
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'phone' => 'required|string|max:20',
+        ], [
+            'phone.required' => 'Nomor HP/WhatsApp baru wajib diisi.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $normalizedPhone = $this->normalizePhone($request->phone);
+        if (strlen($normalizedPhone) < 9) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format nomor HP/WhatsApp tidak valid.',
+            ], 422);
+        }
+
+        $cooldownKey = 'change-phone-otp-cooldown:' . $user->id;
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $seconds = RateLimiter::availableIn($cooldownKey);
+            return response()->json([
+                'success' => false,
+                'message' => 'Mohon tunggu ' . $seconds . ' detik sebelum meminta kode OTP baru.',
+            ], 429);
+        }
+
+        $whatsappService = app(WhatsappService::class);
+        if (!$whatsappService->isEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Layanan Bot WhatsApp sedang tidak aktif. Silakan hubungi Admin.',
+            ], 503);
+        }
+
+        $otp = (string) rand(100000, 999999);
+        $user->update([
+            'whatsapp_otp' => $otp,
+            'whatsapp_otp_expires_at' => now()->addMinutes(5),
+        ]);
+        session(['pending_phone_change' => $normalizedPhone]);
+
+        try {
+            $sent = $whatsappService->sendOtp($normalizedPhone, $otp);
+            if (!$sent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengirim OTP ke WhatsApp (' . $request->phone . '). Pastikan nomor WhatsApp aktif dan bot terhubung.',
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim OTP: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        RateLimiter::hit($cooldownKey, 60);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kode OTP 6 digit telah dikirim oleh Bot WhatsApp ke nomor ' . $request->phone . '.',
+        ]);
     }
 
     /**

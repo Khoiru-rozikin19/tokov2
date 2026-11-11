@@ -148,8 +148,9 @@
 
         <!-- 2. Edit Profil -->
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-            <form action="{{ route('profile.update') }}" method="POST" class="space-y-5">
+            <form id="editProfileForm" action="{{ route('profile.update') }}" method="POST" class="space-y-5">
                 @csrf
+                <input type="hidden" name="phone_otp" id="edit_profile_phone_otp" value="">
                 <div class="pb-3 border-b border-slate-100 dark:border-slate-800">
                     <h3 class="text-base font-bold text-slate-850 dark:text-slate-100">Edit Profil</h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Perbarui informasi nama, email, nomor HP/WA, dan jenis kelamin Anda</p>
@@ -396,7 +397,149 @@
     </div>
 </div>
 
+<!-- ========================================================= -->
+<!-- MODAL VERIFIKASI OTP PERUBAHAN NOMOR HP / WA               -->
+<!-- ========================================================= -->
+<div id="phoneChangeOtpModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md border border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-2xl relative space-y-5">
+        <button type="button" onclick="closePhoneChangeOtpModal()" class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div>
+            <h3 class="text-xl font-extrabold text-slate-850 dark:text-slate-100">Verifikasi Nomor WhatsApp</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Anda mengubah nomor HP/WA. Masukkan kode OTP yang dikirim oleh Bot WhatsApp ke nomor: <strong id="phoneChangeTargetDisplay" class="font-mono text-slate-700 dark:text-slate-200">{{ old('phone', $user->phone) }}</strong>
+            </p>
+        </div>
+
+        <div id="phoneChangeOtpAlert" class="hidden p-3.5 rounded-2xl text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-between gap-3 p-3.5 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-slate-150 dark:border-slate-800">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Belum menerima kode OTP?</span>
+            <button type="button" id="btnSendPhoneChangeOtp" onclick="sendPhoneChangeOtp()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap">
+                Kirim Ulang OTP
+            </button>
+        </div>
+
+        <div class="space-y-1.5">
+            <label for="phone_change_otp_input" class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kode OTP WhatsApp (6 Digit)</label>
+            <input type="text" id="phone_change_otp_input" maxlength="6" placeholder="Masukkan 6 digit kode OTP..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-sm font-mono font-bold tracking-widest text-center text-slate-800 dark:text-slate-100">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-2.5">
+            <button type="button" onclick="closePhoneChangeOtpModal()" class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 rounded-xl transition">
+                Batal
+            </button>
+            <button type="button" onclick="confirmPhoneChangeOtpSubmit()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 transition">
+                Verifikasi & Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+    const originalUserPhoneRaw = @json($user->phone ?? '');
+
+    function normalizePhoneJS(phone) {
+        let digits = String(phone || '').replace(/[^0-9]/g, '');
+        if (digits.startsWith('0')) {
+            digits = '62' + digits.substring(1);
+        }
+        return digits;
+    }
+
+    const originalUserPhoneNormalized = normalizePhoneJS(originalUserPhoneRaw);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const editProfileForm = document.getElementById('editProfileForm');
+        const phoneInput = document.getElementById('phone');
+        const hiddenPhoneOtp = document.getElementById('edit_profile_phone_otp');
+
+        if (editProfileForm && phoneInput && hiddenPhoneOtp) {
+            editProfileForm.addEventListener('submit', function (e) {
+                const currentNormalized = normalizePhoneJS(phoneInput.value);
+                if (currentNormalized !== originalUserPhoneNormalized && !hiddenPhoneOtp.value.trim()) {
+                    e.preventDefault();
+                    openPhoneChangeOtpModal(true);
+                }
+            });
+        }
+
+        @if(session('open_phone_otp_modal'))
+            openPhoneChangeOtpModal(false);
+        @endif
+    });
+
+    function openPhoneChangeOtpModal(autoSendOtp) {
+        const phoneVal = document.getElementById('phone').value.trim();
+        document.getElementById('phoneChangeTargetDisplay').innerText = phoneVal || '-';
+        document.getElementById('phone_change_otp_input').value = '';
+        const alertBox = document.getElementById('phoneChangeOtpAlert');
+        alertBox.classList.add('hidden');
+        document.getElementById('phoneChangeOtpModal').classList.remove('hidden');
+
+        if (autoSendOtp) {
+            sendPhoneChangeOtp();
+        }
+    }
+
+    function closePhoneChangeOtpModal() {
+        document.getElementById('phoneChangeOtpModal').classList.add('hidden');
+    }
+
+    function showPhoneChangeOtpAlert(message, isSuccess) {
+        const alertBox = document.getElementById('phoneChangeOtpAlert');
+        alertBox.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200', 'bg-rose-50', 'text-rose-700', 'border-rose-200');
+        if (isSuccess) {
+            alertBox.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+        } else {
+            alertBox.classList.add('bg-rose-50', 'text-rose-700', 'border', 'border-rose-200');
+        }
+        alertBox.innerText = message;
+    }
+
+    function sendPhoneChangeOtp() {
+        const phoneVal = document.getElementById('phone').value.trim();
+        const btn = document.getElementById('btnSendPhoneChangeOtp');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = 'Mengirim...';
+        showPhoneChangeOtpAlert('Mengirim kode OTP ke WhatsApp ' + phoneVal + '...', true);
+
+        fetch("{{ route('profile.phone.send_otp') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                phone: phoneVal
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+            showPhoneChangeOtpAlert(data.message || 'Permintaan OTP diproses.', !!data.success);
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerText = originalText;
+            showPhoneChangeOtpAlert('Terjadi kesalahan jaringan saat mengirim OTP WhatsApp.', false);
+        });
+    }
+
+    function confirmPhoneChangeOtpSubmit() {
+        const otpVal = document.getElementById('phone_change_otp_input').value.trim();
+        if (otpVal.length !== 6) {
+            showPhoneChangeOtpAlert('Silakan masukkan 6 digit kode OTP WhatsApp terlebih dahulu.', false);
+            return;
+        }
+        document.getElementById('edit_profile_phone_otp').value = otpVal;
+        document.getElementById('editProfileForm').submit();
+    }
     function switchProfileMainTab(tab) {
         const sectionProfil = document.getElementById('sectionTabProfil');
         const sectionMenu = document.getElementById('sectionTabMenu');
