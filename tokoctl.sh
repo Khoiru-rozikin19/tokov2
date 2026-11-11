@@ -2940,6 +2940,15 @@ EOT
         pm2 save
     fi
 
+    # 8. Perbarui Webhook Bot Telegram ke domain baru secara otomatis
+    local tg_token=$(grep "^TELEGRAM_BOT_TOKEN=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"'\''\r')
+    local tg_base=$(grep "^TELEGRAM_API_BASE=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"'\''\r')
+    tg_base=${tg_base:-https://api.telegram.org}
+    if [ -n "$tg_token" ]; then
+        print_info "Memperbarui URL Webhook Bot Telegram ke https://$new_domain/webhook/telegram..."
+        curl -s -k "${tg_base}/bot${tg_token}/setWebhook?url=https://${new_domain}/webhook/telegram" >/dev/null 2>&1 || true
+    fi
+
     print_border
     print_success "Domain berhasil diganti dengan sukses!"
     echo -e "Website sekarang dapat diakses secara langsung di alamat domain baru:"
