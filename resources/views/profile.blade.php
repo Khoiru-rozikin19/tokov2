@@ -259,6 +259,19 @@
             </form>
         </div>
 
+        <!-- 4. Logout (Di bawah Pengaturan Password) -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="w-full flex items-center justify-center space-x-2.5 px-6 py-3.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold active:scale-95 transition-all duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Logout / Keluar Akun</span>
+                </button>
+            </form>
+        </div>
+
         <!-- Upgrade Account Portal (If role is buyer) -->
         @if($user->role === 'buyer')
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">

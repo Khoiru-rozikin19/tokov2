@@ -260,20 +260,12 @@
                     </button>
 
                     <!-- User Actions -->
-                    @if(Auth::check())
-                        <form action="{{ route('logout') }}" method="POST" class="inline">
-                            @csrf
-                            <button type="submit" class="flex items-center space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200" title="Logout">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                                <span class="hidden sm:inline">Logout</span>
-                            </button>
-                        </form>
-                    @else
+                    @guest
                         <a href="{{ route('login') }}" class="flex items-center space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-md shadow-emerald-500/10" title="Login">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
                             <span class="hidden sm:inline">Login</span>
                         </a>
-                    @endif
+                    @endguest
                 </div>
             </header>
 
