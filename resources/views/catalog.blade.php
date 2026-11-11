@@ -175,12 +175,7 @@
             <form id="purchaseForm" onsubmit="submitPurchase(event)" class="mt-6 space-y-5">
                 @csrf
                 <input type="hidden" id="formProductId" name="product_id">
-                
-                <div>
-                    <label for="email_or_whatsapp" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Email / WhatsApp Pembeli</label>
-                    <input type="text" id="email_or_whatsapp" name="email_or_whatsapp" required value="{{ Auth::check() ? (Auth::user()->email ?: Auth::user()->phone) : '' }}" placeholder="Contoh: user@gmail.com atau 08123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
-                </div>
+                <input type="hidden" id="email_or_whatsapp" name="email_or_whatsapp" value="{{ Auth::check() ? (Auth::user()->email ?: Auth::user()->phone) : '' }}">
 
                 <div id="targetPhoneContainer" class="hidden">
                     <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>

@@ -58,6 +58,12 @@ class CatalogController extends Controller
         $product = Product::findOrFail($request->product_id);
         $isPreorder = ($product->status === 'close' && !empty($product->orderkuota_product_code));
 
+        if (!$request->filled('email_or_whatsapp') && auth()->check()) {
+            $request->merge([
+                'email_or_whatsapp' => auth()->user()->email ?: auth()->user()->phone,
+            ]);
+        }
+
         $rules = [
             'product_id' => 'required|exists:products,id',
             'email_or_whatsapp' => 'required|string|max:255',
