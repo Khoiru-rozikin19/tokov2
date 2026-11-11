@@ -154,6 +154,10 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                             <span>Riwayat Pesanan</span>
                         </a>
+                        <a href="{{ Auth::check() ? route('balance.index') : route('login') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('balance.*') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"></path></svg>
+                            <span>Dompet</span>
+                        </a>
                     </div>
                 </div>
 
@@ -301,11 +305,12 @@
 
     <!-- Mobile Bottom Navigation Bar -->
     <nav aria-label="Navigasi Utama Mobile" class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
-        <div class="grid grid-cols-3 h-16 max-w-md mx-auto">
+        <div class="grid grid-cols-4 h-16 max-w-md mx-auto">
             <!-- 1. Home (Katalog Produk) -->
             @php
                 $isHomeActive = request()->is('catalog') || request()->is('/');
                 $isHistoryActive = request()->routeIs('orders.history');
+                $isWalletActive = request()->routeIs('balance.*');
                 $isProfileActive = request()->routeIs('profile.*');
             @endphp
             <a href="{{ url('/catalog') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isHomeActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
@@ -329,7 +334,18 @@
                 <span>Riwayat</span>
             </a>
 
-            <!-- 3. Akun -->
+            <!-- 3. Dompet (Saldo Akun) -->
+            <a href="{{ Auth::check() ? route('balance.index') : route('login') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isWalletActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                @if($isWalletActive)
+                    <span class="absolute top-0 inset-x-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-b-full"></span>
+                @endif
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="{{ $isWalletActive ? '2.25' : '2' }}" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"></path>
+                </svg>
+                <span>Dompet</span>
+            </a>
+
+            <!-- 4. Akun -->
             <a href="{{ Auth::check() ? route('profile.edit') : route('login') }}" class="flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-colors duration-200 relative {{ $isProfileActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
                 @if($isProfileActive)
                     <span class="absolute top-0 inset-x-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-b-full"></span>
