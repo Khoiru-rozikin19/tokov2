@@ -271,13 +271,19 @@
 
         <!-- TRANSACTION SUCCESS STATE -->
         <div id="modalStepSuccess" class="hidden space-y-6">
-            <div class="text-center">
+            <div id="successHeaderDefault" class="text-center">
                 <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Detail Pesanan Anda</h3>
                 <p id="successModalOrderId" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Order ID: ORD-XXXXXX</p>
             </div>
 
             <div id="successDetailsContainer" class="bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl text-slate-800 dark:text-slate-200">
                 <!-- Dinamis diisi lewat JavaScript -->
+            </div>
+
+            <div id="successFooterAction" class="pt-2">
+                <button type="button" onclick="closeModal()" class="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm transition shadow-lg shadow-blue-500/20 active:scale-95">
+                    Lanjut Belanja
+                </button>
             </div>
         </div>
 
@@ -600,7 +606,7 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
+                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses' || data.status === 'proses') {
                     showSuccessState(data.vpn_config, data.success_instruction);
                 } else if (data.status === 'expired') {
                     showExpiredState();
@@ -613,23 +619,23 @@
     }
 
     function showSuccessState(vpnConfig, successInstruction) {
+        const completedOrderId = activeOrderId;
         resetOrderTracker();
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.remove('hidden');
         
-        populateSuccessDetails(vpnConfig, successInstruction, activeOrderId);
+        populateSuccessDetails(vpnConfig, successInstruction, completedOrderId);
     }
 
     function populateSuccessDetails(config, successInstruction, orderId) {
         const container = document.getElementById('successDetailsContainer');
         if (!container) return;
         
+        const headerDefault = document.getElementById('successHeaderDefault');
         const orderIdSubtitle = document.getElementById('successModalOrderId');
         if (orderIdSubtitle) {
-            orderIdSubtitle.innerText = 'Order ID: ' + orderId;
+            orderIdSubtitle.innerText = 'Order ID: ' + (orderId || '');
         }
-        
-        container.className = "bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl max-w-lg mx-auto space-y-3 text-slate-800 dark:text-slate-200";
 
         // Extract node link (vmess, vless, trojan, ss, shadowsocks)
         const trimmedConfig = config ? config.trim() : '';
@@ -638,6 +644,45 @@
         if (match) {
             nodeLink = match[0];
         }
+
+        // Case 0: Produk TIDAK memiliki otomatisasi/konfigurasi VPS (trimmedConfig kosong)
+        if (!trimmedConfig) {
+            if (headerDefault) {
+                headerDefault.classList.add('hidden');
+            }
+            container.className = "text-center space-y-5 py-2 text-slate-800 dark:text-slate-200";
+            let html = `
+                <div class="pt-2">
+                    <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-100 dark:ring-emerald-950/50">
+                        <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Pembayaran Berhasil!</h3>
+                    <p class="text-xs font-mono text-slate-400 dark:text-slate-500">Order ID: ${escapeHtml(orderId || '')}</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">Pembayaran Anda telah terverifikasi dan pesanan sedang diproses otomatis.</p>
+                </div>
+            `;
+
+            if (successInstruction && successInstruction.trim() !== '') {
+                html += `
+                    <div class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-left">
+                        <span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold block uppercase tracking-wider mb-1">Informasi Pesanan:</span>
+                        <div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            return;
+        }
+
+        if (headerDefault) {
+            headerDefault.classList.remove('hidden');
+        }
+        container.className = "bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl max-w-lg mx-auto space-y-3 text-slate-800 dark:text-slate-200";
 
         // Case 1: Config is a node link (vmess, vless, trojan, etc.)
         if (nodeLink) {

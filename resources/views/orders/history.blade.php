@@ -205,6 +205,24 @@
         <!-- Mobile View (Cards) -->
         <div class="space-y-4 md:hidden p-4">
             @forelse($orders as $order)
+                @php
+                    $complaint = $order->complaints->first();
+                    
+                    $hasVpn = !empty($order->vpn_config);
+                    $isNodeLink = false;
+                    $isViewableAccount = false;
+                    if ($hasVpn) {
+                        $vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
+                        foreach ($vpnProtocols as $proto) {
+                            if (stripos($order->vpn_config, $proto) !== false) {
+                                $isNodeLink = true;
+                                break;
+                            }
+                        }
+                        $isSingleLine = !str_contains($order->vpn_config, "\n") && !str_contains($order->vpn_config, "\r");
+                        $isViewableAccount = ($isNodeLink || $isSingleLine);
+                    }
+                @endphp
                 <div class="bg-slate-50 dark:bg-slate-900/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-2xs">
                     <div class="flex items-center justify-between">
                         <span class="font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">#{{ $order->id }}</span>

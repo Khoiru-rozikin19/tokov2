@@ -363,10 +363,10 @@ class CatalogController extends Controller
 
         $response = [
             'status' => $order->status,
-            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses']),
+            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses', 'proses']),
         ];
 
-        if (in_array($order->status, ['success', 'paid', 'sukses'])) {
+        if (in_array($order->status, ['success', 'paid', 'sukses', 'proses'])) {
             $response['vpn_config'] = $order->vpn_config;
             $response['success_instruction'] = $order->product ? $order->product->success_instruction : null;
         }
