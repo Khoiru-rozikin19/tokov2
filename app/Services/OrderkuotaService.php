@@ -253,49 +253,45 @@ class OrderkuotaService
 
             $statuses = [];
 
-            // 1. Prioritaskan endpoint JSON resmi Okeconnect (~1.2 MB vs ~13.8 MB HTML, jauh lebih cepat & hemat RAM)
-            $jsonBody = @file_get_contents($jsonUrl, false, $context);
-            if (!empty($jsonBody)) {
-                $decoded = json_decode($jsonBody, true);
-                if (is_array($decoded)) {
-                    foreach ($decoded as $item) {
-                        $code = isset($item['kode']) ? trim((string) $item['kode']) : '';
-                        if ($code !== '') {
-                            $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
-                            $statuses[$code] = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
-                        }
+            // 1. Utamakan halaman tabel HTML (/harga/list) karena menampilkan status real-time yang akurat (open/close),
+            //    sedangkan endpoint /harga/json dari OKEConnect sering mengembalikan status=1 meskipun produk sedang close.
+            $html = @file_get_contents($htmlUrl, false, $context);
+            if (!empty($html)) {
+                foreach (explode('</tr>', $html) as $row) {
+                    if (
+                        preg_match('/<tr[^>]*>\s*<td[^>]*>\s*([A-Za-z0-9._-]+)\s*<\/td>/i', $row, $mCode) &&
+                        preg_match('/<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*$/i', $row, $mStatus)
+                    ) {
+                        $codeKey = strtoupper(trim($mCode[1]));
+                        $rawStatus = strtolower(trim($mStatus[1]));
+                        $statuses[$codeKey] = ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close';
                     }
                 }
+                unset($html);
             }
 
-            // 2. Fallback ke halaman HTML dengan Regex ringan (tanpa DOMDocument agar tidak kehabisan memori pada ribuan produk)
+            // 2. Fallback ke endpoint JSON jika halaman HTML gagal diunduh atau kosong
             if (empty($statuses)) {
-                $html = @file_get_contents($htmlUrl, false, $context);
-
-                if (empty($html)) {
-                    Log::error("OrderkuotaService: Gagal mengambil data dari URL {$jsonUrl} maupun {$htmlUrl}");
-                    return [
-                        'success' => false,
-                        'message' => 'Gagal mengunduh daftar harga dari OKEConnect.'
-                    ];
-                }
-
-                if (preg_match_all('/<tr[^>]*>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>.*?<\/td>\s*<td[^>]*>.*?<\/td>\s*<td[^>]*>(.*?)<\/td>/is', $html, $matches, PREG_SET_ORDER)) {
-                    foreach ($matches as $match) {
-                        $code = trim(strip_tags($match[1]));
-                        $statusText = strtolower(trim(strip_tags($match[2])));
-                        if ($code !== '') {
-                            $statuses[$code] = (strpos($statusText, 'open') !== false || $statusText === '1') ? 'open' : 'close';
+                $jsonBody = @file_get_contents($jsonUrl, false, $context);
+                if (!empty($jsonBody)) {
+                    $decoded = json_decode($jsonBody, true);
+                    if (is_array($decoded)) {
+                        foreach ($decoded as $item) {
+                            $code = isset($item['kode']) ? strtoupper(trim((string) $item['kode'])) : '';
+                            if ($code !== '') {
+                                $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
+                                $statuses[$code] = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
+                            }
                         }
                     }
                 }
             }
 
             if (empty($statuses)) {
-                Log::warning("OrderkuotaService: Tidak ada data produk yang berhasil di-parsing.");
+                Log::warning("OrderkuotaService: Tidak ada data produk yang berhasil di-parsing dari {$htmlUrl} maupun {$jsonUrl}.");
                 return [
                     'success' => false,
-                    'message' => 'Format daftar harga OKEConnect tidak dikenali atau kosong.'
+                    'message' => 'Gagal mengunduh atau mengenali format daftar harga dari OKEConnect.'
                 ];
             }
 
@@ -306,7 +302,7 @@ class OrderkuotaService
 
             $updatedCount = 0;
             foreach ($products as $product) {
-                $code = trim($product->orderkuota_product_code);
+                $code = strtoupper(trim($product->orderkuota_product_code));
                 if (isset($statuses[$code])) {
                     $supplierStatus = $statuses[$code];
                     if ($product->status !== $supplierStatus) {
