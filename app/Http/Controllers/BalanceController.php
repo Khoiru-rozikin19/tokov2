@@ -46,6 +46,16 @@ class BalanceController extends Controller
             ->paginate(10, ['*'], 'topup_page')
             ->withQueryString();
 
+        // Active main section ('topup' or 'usage')
+        $activeSection = $request->query('section');
+        if (!$activeSection) {
+            if ($request->has('tab') || $request->has('page')) {
+                $activeSection = 'usage';
+            } else {
+                $activeSection = 'topup';
+            }
+        }
+
         // Tab filter for balance usage/mutation history (excluding topup so it is not duplicated)
         $tab = $request->query('tab', 'all');
 
@@ -69,7 +79,7 @@ class BalanceController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('balance', compact('currentBalance', 'topupOrders', 'transactions', 'tab', 'pendingTopups'));
+        return view('balance', compact('currentBalance', 'topupOrders', 'transactions', 'tab', 'activeSection', 'pendingTopups'));
     }
 
     /**

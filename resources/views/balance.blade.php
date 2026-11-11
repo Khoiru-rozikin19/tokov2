@@ -77,8 +77,20 @@
         </div>
     @endif
 
-    <!-- Riwayat Top Up Saldo (Dedicated Section) -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+    <!-- Toggle Buttons (Kiri: Riwayat Top Up Saldo | Kanan: Riwayat Penggunaan & Transfer Saldo) -->
+    <div class="grid grid-cols-2 gap-2 sm:gap-3 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+        <button type="button" id="btnTabTopup" onclick="switchBalanceHistoryTab('topup')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 {{ ($activeSection ?? 'topup') === 'topup' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            <span>Riwayat Top Up Saldo</span>
+        </button>
+        <button type="button" id="btnTabUsage" onclick="switchBalanceHistoryTab('usage')" class="py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 {{ ($activeSection ?? 'topup') === 'usage' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <span>Riwayat Penggunaan & Transfer Saldo</span>
+        </button>
+    </div>
+
+    <!-- KIRI: Riwayat Top Up Saldo -->
+    <div id="sectionTopupHistory" class="{{ ($activeSection ?? 'topup') === 'topup' ? '' : 'hidden' }} bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
                 <h3 class="font-bold text-slate-850 dark:text-slate-100 text-lg">Riwayat Top Up Saldo</h3>
@@ -160,13 +172,13 @@
 
         @if($topupOrders->hasPages())
             <div class="p-6 border-t border-slate-100 dark:border-slate-800">
-                {{ $topupOrders->links() }}
+                {{ $topupOrders->appends(['section' => 'topup'])->links() }}
             </div>
         @endif
     </div>
 
-    <!-- Riwayat Penggunaan & Mutasi Saldo -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+    <!-- KANAN: Riwayat Penggunaan & Mutasi Saldo -->
+    <div id="sectionUsageHistory" class="{{ ($activeSection ?? 'topup') === 'usage' ? '' : 'hidden' }} bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <h3 class="font-bold text-slate-850 dark:text-slate-100 text-lg">Riwayat Penggunaan & Transfer Saldo</h3>
@@ -175,13 +187,13 @@
             
             <!-- Tabs filters -->
             <div class="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl overflow-x-auto">
-                <a href="{{ route('balance.index', ['tab' => 'all']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
+                <a href="{{ route('balance.index', ['section' => 'usage', 'tab' => 'all']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
                     Semua
                 </a>
-                <a href="{{ route('balance.index', ['tab' => 'purchase']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'purchase' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
+                <a href="{{ route('balance.index', ['section' => 'usage', 'tab' => 'purchase']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'purchase' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
                     Pembelian
                 </a>
-                <a href="{{ route('balance.index', ['tab' => 'transfer']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'transfer' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
+                <a href="{{ route('balance.index', ['section' => 'usage', 'tab' => 'transfer']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'transfer' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
                     Transfer
                 </a>
             </div>
@@ -250,7 +262,7 @@
         
         @if($transactions->hasPages())
             <div class="p-6 border-t border-slate-100 dark:border-slate-800">
-                {{ $transactions->links() }}
+                {{ $transactions->appends(['section' => 'usage'])->links() }}
             </div>
         @endif
     </div>
@@ -417,6 +429,28 @@
     let topupCountdownInterval = null;
     let topupActiveOrderId = null;
     let topupIsCompleted = false;
+
+    function switchBalanceHistoryTab(section) {
+        const topupSection = document.getElementById('sectionTopupHistory');
+        const usageSection = document.getElementById('sectionUsageHistory');
+        const btnTopup = document.getElementById('btnTabTopup');
+        const btnUsage = document.getElementById('btnTabUsage');
+
+        const activeClasses = 'py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 bg-blue-600 text-white shadow-md shadow-blue-500/20';
+        const inactiveClasses = 'py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200';
+
+        if (section === 'usage') {
+            topupSection.classList.add('hidden');
+            usageSection.classList.remove('hidden');
+            btnUsage.className = activeClasses;
+            btnTopup.className = inactiveClasses;
+        } else {
+            usageSection.classList.add('hidden');
+            topupSection.classList.remove('hidden');
+            btnTopup.className = activeClasses;
+            btnUsage.className = inactiveClasses;
+        }
+    }
 
     function openTopupModal() {
         topupIsCompleted = false;
