@@ -22,31 +22,54 @@ class BalanceController extends Controller
         $user = auth()->user();
         $currentBalance = $user->getBalance();
 
-        // Tab filter
+        // Auto-expire past pending topup orders for this user
+        $expiredTopupIds = Order::where('user_id', $user->id)
+            ->where('payment_method', 'topup_balance')
+            ->whereIn('status', ['pending', 'pending_manual'])
+            ->where('expired_at', '<=', Carbon::now())
+            ->pluck('id');
+
+        if ($expiredTopupIds->isNotEmpty()) {
+            Order::whereIn('id', $expiredTopupIds)->update(['status' => 'expired']);
+            BalanceTransaction::whereIn('reference_id', $expiredTopupIds)
+                ->where('status', 'pending')
+                ->update(['status' => 'failed']);
+        }
+
+        // Dedicated Top Up Saldo history (from Order where payment_method = topup_balance)
+        $topupOrders = Order::where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->where('payment_method', 'topup_balance')
+                  ->orWhere('id', 'like', 'TOP-%');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'topup_page')
+            ->withQueryString();
+
+        // Tab filter for balance usage/mutation history (excluding topup so it is not duplicated)
         $tab = $request->query('tab', 'all');
 
         $query = BalanceTransaction::where('user_id', $user->id)
             ->where('status', 'success')
+            ->where('type', '!=', 'topup')
             ->orderBy('created_at', 'desc');
 
-        if ($tab === 'topup') {
-            $query->where('type', 'topup');
-        } elseif ($tab === 'purchase') {
+        if ($tab === 'purchase') {
             $query->where('type', 'purchase');
         } elseif ($tab === 'transfer') {
             $query->whereIn('type', ['transfer_in', 'transfer_out']);
         }
 
-        $transactions = $query->paginate(15)->appends(['tab' => $tab]);
+        $transactions = $query->paginate(15)->withQueryString();
 
-        // Pending topups (for showing active topup orders)
+        // Pending topups (for showing active topup orders banner)
         $pendingTopups = BalanceTransaction::where('user_id', $user->id)
             ->where('type', 'topup')
             ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('balance', compact('currentBalance', 'transactions', 'tab', 'pendingTopups'));
+        return view('balance', compact('currentBalance', 'topupOrders', 'transactions', 'tab', 'pendingTopups'));
     }
 
     /**

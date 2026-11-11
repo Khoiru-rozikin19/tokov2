@@ -112,9 +112,87 @@
         
         <!-- Pagination links -->
         <div class="p-6 border-t border-slate-100 dark:border-slate-800">
-            {{ $orders->appends(request()->query())->links() }}
+            {{ $orders->links() }}
         </div>
     </div>
+
+    @if(auth()->user()->role === 'admin')
+    <!-- Top Up Saldo History Table -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="font-extrabold text-slate-800 dark:text-slate-200">Riwayat Top Up Saldo</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Daftar transaksi pengisian saldo pelanggan via QRIS</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        <th class="py-4.5 px-6">ID Top Up</th>
+                        <th class="py-4.5 px-6">Email / WhatsApp</th>
+                        <th class="py-4.5 px-6">Nominal Saldo</th>
+                        <th class="py-4.5 px-6 text-center">Kode Unik</th>
+                        <th class="py-4.5 px-6">Total Tagihan</th>
+                        <th class="py-4.5 px-6">Status</th>
+                        <th class="py-4.5 px-6">Dibuat Pada</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
+                    @forelse($topupOrders as $topup)
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
+                            <td class="py-4.5 px-6 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
+                                {{ $topup->id }}
+                            </td>
+                            <td class="py-4.5 px-6 text-xs">{{ $topup->email_or_whatsapp }}</td>
+                            <td class="py-4.5 px-6 text-emerald-600 dark:text-emerald-400 font-bold">+Rp {{ number_format($topup->base_amount, 0, ',', '.') }}</td>
+                            <td class="py-4.5 px-6 text-center text-xs font-mono text-amber-600 dark:text-amber-400 font-bold">
+                                +{{ $topup->unique_code }}
+                            </td>
+                            <td class="py-4.5 px-6 font-extrabold text-slate-800 dark:text-slate-100">
+                                Rp {{ number_format($topup->total_amount, 0, ',', '.') }}
+                            </td>
+                            <td class="py-4.5 px-6">
+                                @if(in_array($topup->status, ['success', 'paid', 'sukses']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+                                        Sukses
+                                    </span>
+                                @elseif(in_array($topup->status, ['pending', 'pending_manual']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
+                                        Pending
+                                    </span>
+                                @elseif(in_array($topup->status, ['rejected', 'ditolak']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
+                                        Ditolak
+                                    </span>
+                                @elseif($topup->status === 'expired')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        Expired
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        {{ ucfirst($topup->status) }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-4.5 px-6 text-xs text-slate-400">{{ $topup->created_at->format('d/m/Y H:i') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="py-10 text-center text-slate-400">
+                                Belum ada riwayat top up saldo.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if(method_exists($topupOrders, 'hasPages') && $topupOrders->hasPages())
+            <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+                {{ $topupOrders->links() }}
+            </div>
+        @endif
+    </div>
+    @endif
 
     <!-- Payment Logs (Callbacks from Android App) -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">

@@ -426,7 +426,15 @@ class CatalogController extends Controller
         $variations = array_unique(array_filter($variations));
 
         $orders = Order::with(['product', 'complaints'])
-            ->whereIn('email_or_whatsapp', $variations)
+            ->where(function ($query) use ($user, $variations) {
+                $query->where('user_id', $user->id)
+                      ->orWhereIn('email_or_whatsapp', $variations);
+            })
+            ->where(function ($query) {
+                $query->whereNull('payment_method')
+                      ->orWhere('payment_method', '!=', 'topup_balance');
+            })
+            ->where('id', 'not like', 'TOP-%')
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 

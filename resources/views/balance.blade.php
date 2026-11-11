@@ -77,18 +77,106 @@
         </div>
     @endif
 
-    <!-- Transaction History -->
+    <!-- Riwayat Top Up Saldo (Dedicated Section) -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h3 class="font-bold text-slate-850 dark:text-slate-100 text-lg">Riwayat Top Up Saldo</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Daftar transaksi pengisian saldo akun via QRIS</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-950/40 text-xs font-bold text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 uppercase tracking-wider">
+                        <th class="py-4 px-6">ID Top Up</th>
+                        <th class="py-4 px-6">Nominal Saldo</th>
+                        <th class="py-4 px-6">Total Bayar</th>
+                        <th class="py-4 px-6">Status</th>
+                        <th class="py-4 px-6">Tanggal</th>
+                        <th class="py-4 px-6 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                    @forelse($topupOrders as $topup)
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20 transition-colors">
+                            <td class="py-4 px-6 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold whitespace-nowrap">
+                                {{ $topup->id }}
+                            </td>
+                            <td class="py-4 px-6 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                +Rp {{ number_format($topup->base_amount, 0, ',', '.') }}
+                            </td>
+                            <td class="py-4 px-6 font-extrabold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                                Rp {{ number_format($topup->total_amount, 0, ',', '.') }}
+                                <span class="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold ml-1">(+{{ $topup->unique_code }})</span>
+                            </td>
+                            <td class="py-4 px-6 whitespace-nowrap">
+                                @if(in_array($topup->status, ['success', 'paid', 'sukses']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+                                        Sukses
+                                    </span>
+                                @elseif(in_array($topup->status, ['pending', 'pending_manual']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
+                                        Pending
+                                    </span>
+                                @elseif(in_array($topup->status, ['rejected', 'ditolak']))
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
+                                        Ditolak
+                                    </span>
+                                @elseif($topup->status === 'expired')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        Expired
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        {{ ucfirst($topup->status) }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {{ $topup->created_at->format('d/m/Y H:i') }}
+                            </td>
+                            <td class="py-4 px-6 text-center whitespace-nowrap">
+                                @if(in_array($topup->status, ['pending', 'pending_manual']) && !$topup->isExpired())
+                                    <button type="button" onclick="resumeTopup('{{ $topup->id }}', {{ $topup->total_amount }}, '{{ rawurlencode($topup->qris_payload) }}', '{{ $topup->expired_at->toIso8601String() }}', '{{ \Carbon\Carbon::now()->toIso8601String() }}')" class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition shadow-sm">
+                                        Bayar QRIS
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">-</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="p-10 text-center text-slate-400 dark:text-slate-500 text-sm">
+                                Belum ada riwayat top up saldo.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($topupOrders->hasPages())
+            <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+                {{ $topupOrders->links() }}
+            </div>
+        @endif
+    </div>
+
+    <!-- Riwayat Penggunaan & Mutasi Saldo -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 class="font-bold text-slate-850 dark:text-slate-100 text-lg">Riwayat Saldo</h3>
+            <div>
+                <h3 class="font-bold text-slate-850 dark:text-slate-100 text-lg">Riwayat Penggunaan & Transfer Saldo</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Catatan pemakaian saldo untuk pembelian produk & transfer</p>
+            </div>
             
             <!-- Tabs filters -->
             <div class="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl overflow-x-auto">
                 <a href="{{ route('balance.index', ['tab' => 'all']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'all' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
                     Semua
-                </a>
-                <a href="{{ route('balance.index', ['tab' => 'topup']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'topup' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
-                    Top Up
                 </a>
                 <a href="{{ route('balance.index', ['tab' => 'purchase']) }}" class="px-4 py-1.5 rounded-xl text-xs font-bold transition {{ $tab === 'purchase' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300' }}">
                     Pembelian

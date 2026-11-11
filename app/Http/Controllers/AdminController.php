@@ -410,7 +410,13 @@ class AdminController extends Controller
     {
         $status = $request->query('status');
 
-        $query = Order::with('product.seller')->orderBy('created_at', 'desc');
+        $query = Order::with('product.seller')
+            ->where(function ($q) {
+                $q->whereNull('payment_method')
+                  ->orWhere('payment_method', '!=', 'topup_balance');
+            })
+            ->where('id', 'not like', 'TOP-%')
+            ->orderBy('created_at', 'desc');
 
         // Filter by seller if not admin
         if (auth()->user()->role !== 'admin') {
@@ -431,7 +437,31 @@ class AdminController extends Controller
             }
         }
 
-        $orders = $query->paginate(15);
+        $orders = $query->paginate(15)->withQueryString();
+
+        // Separate Top Up Saldo history (Admin only)
+        $topupOrders = collect();
+        if (auth()->user()->role === 'admin') {
+            $topupQuery = Order::where(function ($q) {
+                    $q->where('payment_method', 'topup_balance')
+                      ->orWhere('id', 'like', 'TOP-%');
+                })
+                ->orderBy('created_at', 'desc');
+
+            if ($status) {
+                if ($status === 'pending') {
+                    $topupQuery->whereIn('status', ['pending', 'pending_manual']);
+                } elseif ($status === 'success') {
+                    $topupQuery->whereIn('status', ['success', 'paid', 'sukses']);
+                } elseif ($status === 'rejected') {
+                    $topupQuery->whereIn('status', ['rejected', 'ditolak']);
+                } else {
+                    $topupQuery->where('status', $status);
+                }
+            }
+
+            $topupOrders = $topupQuery->paginate(10, ['*'], 'topup_page')->withQueryString();
+        }
 
         // Scoped payment logs matching the products/orders
         $paymentLogsQuery = PaymentLog::with('order.product')->orderBy('created_at', 'desc');
@@ -442,7 +472,7 @@ class AdminController extends Controller
         }
         $paymentLogs = $paymentLogsQuery->limit(20)->get();
 
-        return view('admin.transactions', compact('orders', 'paymentLogs', 'status'));
+        return view('admin.transactions', compact('orders', 'topupOrders', 'paymentLogs', 'status'));
     }
 
     /**
