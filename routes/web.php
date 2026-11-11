@@ -50,6 +50,9 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     // User Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post('/profile/forgot-password/send-otp', [ProfileController::class, 'sendForgotPasswordOtp'])->name('profile.forgot_password.send_otp');
+    Route::post('/profile/forgot-password/reset', [ProfileController::class, 'resetPasswordWithOtp'])->name('profile.forgot_password.reset');
 
     // User Balance Routes
     Route::get('/balance', [BalanceController::class, 'index'])->name('balance.index');
