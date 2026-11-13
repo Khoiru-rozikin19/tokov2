@@ -26,19 +26,11 @@ class TokoNotifierApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2563EB),
           primary: const Color(0xFF2563EB),
-          background: const Color(0xFFF8FAFC),
+          surface: const Color(0xFFF8FAFC),
         ),
         fontFamily: 'Roboto',
-        cardTheme: CardTheme(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-        ),
       ),
       home: const HomeScreen(),
     );
   }
 }
-

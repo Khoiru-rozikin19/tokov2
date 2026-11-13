@@ -40,8 +40,14 @@ jobs:
           rm -rf toko-notifier-app/android
           cp -r official_template/android toko-notifier-app/android
           
+          echo "==> Ensuring namespace and applicationId are com.tokovpn.notifier..."
+          sed -i 's/namespace = .*/namespace = "com.tokovpn.notifier"/g' toko-notifier-app/android/app/build.gradle
+          sed -i 's/applicationId = .*/applicationId = "com.tokovpn.notifier"/g' toko-notifier-app/android/app/build.gradle
+          
           echo "==> Injecting custom AndroidManifest.xml and Kotlin services..."
           cp -f toko-notifier-app/custom_native/AndroidManifest.xml toko-notifier-app/android/app/src/main/AndroidManifest.xml
+          
+          rm -rf toko-notifier-app/android/app/src/main/kotlin/*
           mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier
           cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier/
           
@@ -54,9 +60,19 @@ jobs:
 
       - name: Build APK Release
         working-directory: toko-notifier-app
-        run: flutter build apk --release
+        run: |
+          set -o pipefail
+          flutter build apk --release --verbose 2>&1 | tee build_output.log
+
+      - name: Upload Build Log On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-log
+          path: toko-notifier-app/build_output.log
 
       - name: Upload APK Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: toko-notifier-release
