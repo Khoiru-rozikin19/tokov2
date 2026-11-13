@@ -72,6 +72,27 @@ class TestTelegramCommand extends Command
                     $this->line(json_encode($response));
                 }
             }
+
+            // Ensure Telegram Webhook URL matches current APP_URL so inline buttons always work
+            $appUrl = rtrim((string) config('app.url'), '/');
+            if (!empty($appUrl) && str_starts_with($appUrl, 'https://')) {
+                $webhookUrl = $appUrl . '/webhook/telegram';
+                $this->info("Syncing Webhook URL to: {$webhookUrl}...");
+                try {
+                    $whRes = \Illuminate\Support\Facades\Http::timeout(10)
+                        ->withoutVerifying()
+                        ->get(rtrim($apiBase, '/') . "/bot{$token}/setWebhook", [
+                            'url' => $webhookUrl,
+                        ]);
+                    if ($whRes->successful() && $whRes->json('ok')) {
+                        $this->info("-> WEBHOOK: SUCCESS! Registered to {$webhookUrl}");
+                    } else {
+                        $this->warn("-> WEBHOOK WARNING: " . $whRes->body());
+                    }
+                } catch (\Exception $e) {
+                    $this->warn("-> WEBHOOK ERROR: " . $e->getMessage());
+                }
+            }
         } else {
             $this->error("Error: TELEGRAM_BOT_TOKEN is empty in .env.");
         }

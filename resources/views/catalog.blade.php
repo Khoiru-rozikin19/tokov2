@@ -179,7 +179,7 @@
 
                 <div id="targetPhoneContainer" class="hidden">
                     <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>
-                    <input type="tel" inputmode="numeric" pattern="[0-9]*" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="15" autocomplete="off" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                     <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
                 </div>
 
@@ -356,6 +356,9 @@
         
         const targetPhoneContainer = document.getElementById('targetPhoneContainer');
         const targetPhoneInput = document.getElementById('target_phone');
+
+        // Selalu kosongkan kolom nomor HP setiap kali modal dibuka
+        targetPhoneInput.value = '';
         
         if (hasSupplierCode && hasSupplierCode !== '') {
             targetPhoneContainer.classList.remove('hidden');
@@ -363,7 +366,6 @@
         } else {
             targetPhoneContainer.classList.add('hidden');
             targetPhoneInput.required = false;
-            targetPhoneInput.value = '';
         }
 
         const preorderNameContainer = document.getElementById('preorderNameContainer');
@@ -457,7 +459,61 @@
     function closeModal() {
         document.getElementById('purchaseModal').classList.add('hidden');
         resetOrderTracker();
+
+        // Bersihkan kolom nomor HP tujuan & nama pre-order saat modal ditutup
+        const targetPhoneInput = document.getElementById('target_phone');
+        if (targetPhoneInput) targetPhoneInput.value = '';
+        const preorderNameInput = document.getElementById('preorder_name');
+        if (preorderNameInput) preorderNameInput.value = '';
     }
+
+    // =====================================================
+    // Auto-correct Nomor HP Tujuan (hanya angka, format 08xxx)
+    // =====================================================
+    function normalizeTargetPhone(raw) {
+        let digits = String(raw || '').replace(/[^0-9]/g, '');
+        if (digits.startsWith('628')) {
+            digits = '0' + digits.substring(2);          // +62 878... / 62878... -> 0878...
+        } else if (digits.startsWith('8') && digits.length >= 9) {
+            digits = '0' + digits;                        // 878... -> 0878...
+        }
+        return digits;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('target_phone');
+        if (!phoneInput) return;
+
+        // 1. Tolak karakter selain angka saat diketik
+        phoneInput.addEventListener('beforeinput', function (e) {
+            if (e.inputType === 'insertText' && e.data && /[^0-9]/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+
+        // 2. Saat menempel (paste), rapikan otomatis menjadi format 08xxxxxxxxxx
+        phoneInput.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text');
+            const start = phoneInput.selectionStart ?? phoneInput.value.length;
+            const end = phoneInput.selectionEnd ?? phoneInput.value.length;
+            const combined = phoneInput.value.slice(0, start) + pasted + phoneInput.value.slice(end);
+            phoneInput.value = normalizeTargetPhone(combined);
+        });
+
+        // 3. Jaring pengaman (autofill / keyboard HP / drag-drop): buang semua karakter non-angka
+        phoneInput.addEventListener('input', function () {
+            const cleaned = phoneInput.value.replace(/[^0-9]/g, '');
+            if (cleaned !== phoneInput.value) {
+                phoneInput.value = normalizeTargetPhone(phoneInput.value);
+            }
+        });
+
+        // 4. Saat kolom ditinggalkan, rapikan awalan 62 / 8 menjadi 08
+        phoneInput.addEventListener('blur', function () {
+            phoneInput.value = normalizeTargetPhone(phoneInput.value);
+        });
+    });
 
     function resetOrderTracker() {
         activeOrderId = null;
@@ -473,6 +529,7 @@
         const productId = document.getElementById('formProductId').value;
         const targetPhoneInput = document.getElementById('target_phone');
         const targetPhoneContainer = document.getElementById('targetPhoneContainer');
+        targetPhoneInput.value = normalizeTargetPhone(targetPhoneInput.value);
         const targetPhone = targetPhoneInput.value.trim();
         
         // Client-side validation for target_phone if visible

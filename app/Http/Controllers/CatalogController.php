@@ -78,6 +78,15 @@ class CatalogController extends Controller
 
         // Validasi Nomor HP Tujuan / ID Pelanggan secara dinamis untuk produk supplier (pulsa/kuota)
         if (!empty($product->orderkuota_product_code)) {
+            // Normalisasi otomatis: buang karakter non-angka & ubah awalan 62 / 8 menjadi 08
+            $normalizedTarget = preg_replace('/[^0-9]/', '', (string) $request->input('target_phone', ''));
+            if (str_starts_with($normalizedTarget, '628')) {
+                $normalizedTarget = '0' . substr($normalizedTarget, 2);
+            } elseif (str_starts_with($normalizedTarget, '8') && strlen($normalizedTarget) >= 9) {
+                $normalizedTarget = '0' . $normalizedTarget;
+            }
+            $request->merge(['target_phone' => $normalizedTarget]);
+
             $rules['target_phone'] = 'required|regex:/^[0-9]+$/|min:10|max:13';
         } else {
             $rules['target_phone'] = 'nullable|string|max:255';
