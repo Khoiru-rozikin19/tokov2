@@ -301,15 +301,29 @@ class OrderkuotaService
                 ->get();
 
             $updatedCount = 0;
+            $changedProducts = [];
+
             foreach ($products as $product) {
                 $code = strtoupper(trim($product->orderkuota_product_code));
                 if (isset($statuses[$code])) {
                     $supplierStatus = $statuses[$code];
                     if ($product->status !== $supplierStatus) {
+                        $oldStatus = $product->status;
                         $product->update(['status' => $supplierStatus]);
                         $updatedCount++;
+                        $changedProducts[] = [
+                            'name' => $product->name,
+                            'code' => $code,
+                            'old_status' => $oldStatus ?: 'close',
+                            'new_status' => $supplierStatus,
+                        ];
                     }
                 }
+            }
+
+            // Kirim notifikasi WhatsApp ke nomor admin jika ada perubahan status produk
+            if (!empty($changedProducts)) {
+                $this->notifyAdminProductStatusChanges($changedProducts);
             }
 
             // Process any pending pre-orders that are now open
@@ -380,6 +394,42 @@ class OrderkuotaService
             } catch (\Exception $e) {
                 Log::error("OrderkuotaService: Gagal memproses pre-order {$order->id}: " . $e->getMessage());
             }
+        }
+    }
+
+    /**
+     * Send WhatsApp notification to Admin when products change status (Open <-> Close).
+     */
+    protected function notifyAdminProductStatusChanges(array $changes): void
+    {
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            $adminPhone = Setting::get('whatsapp_bot_admin_phone');
+
+            if (empty($adminPhone)) {
+                return;
+            }
+
+            $date = date('d-m-Y H:i:s');
+            $lines = [];
+            foreach ($changes as $item) {
+                $statusIcon = $item['new_status'] === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
+                $oldIcon = $item['old_status'] === 'open' ? 'Open' : 'Close';
+                $lines[] = "• *{$item['name']}* ({$item['code']})\n  Status: {$oldIcon} ➔ {$statusIcon}";
+            }
+
+            $listText = implode("\n\n", $lines);
+
+            $message = "📢 *UPDATE STATUS PRODUK OKEConnect*\n"
+                     . "📅 Waktu: {$date}\n\n"
+                     . "Terdeteksi perubahan status pada produk berikut:\n\n"
+                     . "{$listText}\n\n"
+                     . "ℹ️ _Pesan otomatis sistem RZK Store._";
+
+            $whatsappService->sendToAdmin($message);
+            Log::info("OrderkuotaService: Notifikasi perubahan status dikirim ke WA Admin ({$adminPhone}).");
+        } catch (\Throwable $e) {
+            Log::error("OrderkuotaService notifyAdminProductStatusChanges Exception: " . $e->getMessage());
         }
     }
 }

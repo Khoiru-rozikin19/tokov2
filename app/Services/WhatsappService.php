@@ -12,6 +12,7 @@ class WhatsappService
     protected $enabled;
     protected $otpEnabled;
     protected $groupId;
+    protected $adminPhone;
 
     public function __construct()
     {
@@ -19,6 +20,12 @@ class WhatsappService
         $this->enabled = Setting::get('whatsapp_bot_enabled', '0') === '1';
         $this->otpEnabled = Setting::get('whatsapp_bot_otp_enabled', '0') === '1';
         $this->groupId = Setting::get('whatsapp_bot_group_id', '');
+        $this->adminPhone = Setting::get('whatsapp_bot_admin_phone', '');
+    }
+
+    public function getAdminPhone(): ?string
+    {
+        return $this->adminPhone;
     }
 
     public function isEnabled(): bool
@@ -173,6 +180,40 @@ class WhatsappService
         $message = "{$template}\n\n_Ref: [{$refCode}] • Waktu: {$timestamp}_";
                  
         return $this->sendGenericMessage($phone, $message);
+    }
+
+    /**
+     * Send direct WhatsApp notification to Admin private phone.
+     */
+    public function sendToAdmin(string $message): bool
+    {
+        $adminPhone = preg_replace('/[^0-9]/', '', (string) Setting::get('whatsapp_bot_admin_phone', ''));
+        if (empty($adminPhone)) {
+            return false;
+        }
+
+        if (str_starts_with($adminPhone, '0')) {
+            $adminPhone = '62' . substr($adminPhone, 1);
+        }
+
+        try {
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->post("{$this->apiUrl}/send-message", [
+                    'phone' => $adminPhone,
+                    'message' => $message
+                ]);
+
+            if ($response->failed()) {
+                Log::error("WhatsappService sendToAdmin Failed: " . $response->body());
+                return false;
+            }
+
+            return $response->json('success', false);
+        } catch (\Exception $e) {
+            Log::error("WhatsappService sendToAdmin Exception: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**

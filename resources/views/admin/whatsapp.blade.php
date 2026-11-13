@@ -98,6 +98,13 @@
                         <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Gunakan ID grup lengkap berakhiran <code>@g.us</code>. Bot akan mem-broadcast update dan status ke grup ini.</p>
                     </div>
 
+                    <!-- Admin Private Phone (Notifikasi Status OKEConnect) -->
+                    <div class="space-y-1.5">
+                        <label for="whatsapp_bot_admin_phone" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Nomor WhatsApp Pribadi Admin</label>
+                        <input type="text" id="whatsapp_bot_admin_phone" name="whatsapp_bot_admin_phone" value="{{ $adminPhone }}" placeholder="Contoh: 08123456789 atau 628123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
+                        <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Nomor WA Anda untuk menerima notifikasi otomatis ketika ada perubahan status produk OKEConnect (Open ↔ Close).</p>
+                    </div>
+
                     <!-- API URL Gateway -->
                     <div class="space-y-1.5">
                         <label for="whatsapp_bot_api_url" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">URL API Gateway Lokal (Port 3000)</label>

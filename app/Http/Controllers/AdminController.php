@@ -1231,6 +1231,7 @@ class AdminController extends Controller
             'apiUrl' => $whatsappService->getApiUrl(),
             'botEnabled' => \App\Models\Setting::get('whatsapp_bot_enabled', '0'),
             'otpEnabled' => \App\Models\Setting::get('whatsapp_bot_otp_enabled', '0'),
+            'adminPhone' => \App\Models\Setting::get('whatsapp_bot_admin_phone', ''),
             'groupId' => \App\Models\Setting::get('whatsapp_bot_group_id', ''),
         ]);
     }
@@ -1243,12 +1244,14 @@ class AdminController extends Controller
         $request->validate([
             'whatsapp_bot_enabled' => 'required|in:0,1',
             'whatsapp_bot_otp_enabled' => 'required|in:0,1',
+            'whatsapp_bot_admin_phone' => 'nullable|string|max:30',
             'whatsapp_bot_group_id' => 'nullable|string|max:255',
             'whatsapp_bot_api_url' => 'required|url|max:255',
         ]);
 
         \App\Models\Setting::set('whatsapp_bot_enabled', $request->whatsapp_bot_enabled);
         \App\Models\Setting::set('whatsapp_bot_otp_enabled', $request->whatsapp_bot_otp_enabled);
+        \App\Models\Setting::set('whatsapp_bot_admin_phone', $request->whatsapp_bot_admin_phone);
         \App\Models\Setting::set('whatsapp_bot_group_id', $request->whatsapp_bot_group_id);
         \App\Models\Setting::set('whatsapp_bot_api_url', $request->whatsapp_bot_api_url);
 
