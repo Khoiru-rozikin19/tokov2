@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 
 class ForegroundKeepAliveService : Service() {
 
@@ -46,13 +45,19 @@ class ForegroundKeepAliveService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+
+        return builder
             .setContentTitle("Toko Notifier Aktif")
             .setContentText("Memantau notifikasi pembayaran QRIS & Bank di latar belakang...")
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
 
@@ -71,4 +76,3 @@ class ForegroundKeepAliveService : Service() {
         }
     }
 }
-

@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -20,7 +19,7 @@ class MainActivity : FlutterActivity() {
     private val METHOD_CHANNEL = "com.tokovpn.notifier/methods"
     private val EVENT_CHANNEL = "com.tokovpn.notifier/events"
 
-    override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         // Event Channel untuk streaming status dan log notifikasi ke UI Flutter
@@ -102,10 +101,7 @@ class MainActivity : FlutterActivity() {
                 }
                 startActivity(intent)
             } catch (e: Exception) {
-                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(intent)
+                e.printStackTrace()
             }
         }
     }
@@ -124,38 +120,28 @@ class MainActivity : FlutterActivity() {
         stopService(intent)
     }
 
-    /**
-     * Mengambil daftar aplikasi yang terpasang di HP pengguna beserta nama dan package name-nya
-     */
-    private fun getInstalledApplicationsList(): List<Map<String, Any>> {
+    private fun getInstalledApplicationsList(): List<Map<String, String>> {
         val pm = packageManager
         val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        val list = mutableListOf<Map<String, Any>>()
+        val result = mutableListOf<Map<String, String>>()
 
         for (app in apps) {
-            // Filter: utamakan aplikasi non-sistem atau aplikasi pembayaran umum
-            val isSystemApp = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            // Prioritaskan aplikasi non-sistem atau aplikasi perbankan/e-wallet umum
+            val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
             val appName = pm.getApplicationLabel(app).toString()
             val packageName = app.packageName
 
-            if (!isSystemApp || isPaymentRelevant(packageName)) {
-                val map = HashMap<String, Any>()
-                map["name"] = appName
-                map["package_name"] = packageName
-                list.add(map)
+            // Masukkan aplikasi pengguna atau aplikasi yang berbau bank/fintech/wallet
+            if (!isSystem || packageName.contains("bank") || packageName.contains("pay") || packageName.contains("dana") || packageName.contains("ovo")) {
+                val item = HashMap<String, String>()
+                item["packageName"] = packageName
+                item["appName"] = appName
+                result.add(item)
             }
         }
 
-        // Urutkan alfabetis berdasarkan nama aplikasi
-        return list.sortedBy { (it["name"] as String).lowercase() }
-    }
-
-    private fun isPaymentRelevant(pkg: String): Boolean {
-        val lower = pkg.lowercase()
-        return lower.contains("bca") || lower.contains("bri") || lower.contains("mandiri") ||
-                lower.contains("bni") || lower.contains("dana") || lower.contains("ovo") ||
-                lower.contains("gopay") || lower.contains("shopee") || lower.contains("linkaja") ||
-                lower.contains("qris") || lower.contains("bank") || lower.contains("wallet")
+        // Urutkan berdasarkan nama aplikasi
+        result.sortBy { it["appName"]?.lowercase() }
+        return result
     }
 }
-

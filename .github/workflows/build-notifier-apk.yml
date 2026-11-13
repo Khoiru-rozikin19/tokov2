@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'd:/laravel/toko-notifier-app/**'
+      - 'toko-notifier-app/**'
       - '.github/workflows/build-notifier-apk.yml'
 
 jobs:
@@ -31,13 +31,30 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Scaffold Official Flutter Android Environment
+        run: |
+          echo "==> Creating clean Flutter Android scaffold..."
+          flutter create --org com.tokovpn --project-name notifier --platforms android official_template
+          
+          echo "==> Replacing android directory with official scaffolding..."
+          rm -rf toko-notifier-app/android
+          cp -r official_template/android toko-notifier-app/android
+          
+          echo "==> Injecting custom AndroidManifest.xml and Kotlin services..."
+          cp -f toko-notifier-app/custom_native/AndroidManifest.xml toko-notifier-app/android/app/src/main/AndroidManifest.xml
+          mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier
+          cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier/
+          
+          echo "==> Making gradlew executable..."
+          chmod +x toko-notifier-app/android/gradlew
+
       - name: Get Dependencies
         working-directory: toko-notifier-app
         run: flutter pub get
 
       - name: Build APK Release
         working-directory: toko-notifier-app
-        run: flutter build apk --release --verbose
+        run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -45,4 +62,3 @@ jobs:
           name: toko-notifier-release
           path: toko-notifier-app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-
