@@ -1270,6 +1270,47 @@ class AdminController extends Controller
     }
 
     /**
+     * Send test WhatsApp message from admin panel via backend proxy.
+     */
+    public function whatsappTestSend(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|string',
+            'message' => 'required|string',
+        ]);
+
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $phone = preg_replace('/[^0-9]/', '', $request->phone);
+        if (str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        try {
+            $apiUrl = rtrim($whatsappService->getApiUrl(), '/');
+            $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->withoutVerifying()
+                ->post("{$apiUrl}/send-message", [
+                    'phone' => $phone,
+                    'message' => $request->message,
+                ]);
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $response->json('error') ?? 'Gagal menghubungi gateway (Status ' . $response->status() . ')',
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Koneksi ke gateway gagal: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Get connection status for AJAX polling.
      */
     public function whatsappStatusAjax()

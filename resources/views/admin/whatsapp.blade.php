@@ -217,10 +217,11 @@
         resultDiv.textContent = 'Sedang mengirim...';
         resultDiv.classList.remove('hidden');
 
-        fetch('{{ $apiUrl }}/send-message', {
+        fetch('{{ route("admin.whatsapp.test_send") }}', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify({ phone, message })
         })

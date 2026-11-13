@@ -95,6 +95,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::get('/whatsapp', [AdminController::class, 'whatsappPanel'])->name('whatsapp');
         Route::post('/whatsapp/settings', [AdminController::class, 'updateWhatsappSettings'])->name('whatsapp.settings');
         Route::post('/whatsapp/disconnect', [AdminController::class, 'whatsappDisconnect'])->name('whatsapp.disconnect');
+        Route::post('/whatsapp/test-send', [AdminController::class, 'whatsappTestSend'])->name('whatsapp.test_send');
         Route::get('/whatsapp/status-ajax', [AdminController::class, 'whatsappStatusAjax'])->name('whatsapp.status_ajax');
         Route::get('/supplier-settings', [AdminController::class, 'supplierSettings'])->name('supplier_settings');
         Route::post('/supplier-settings', [AdminController::class, 'updateSupplierSettings'])->name('supplier_settings.update');
