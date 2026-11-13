@@ -1,10 +1,7 @@
-package com.tokovpn.notifier
+package com.tokovpn.toko_notifier
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -97,7 +94,6 @@ class PaymentNotificationListenerService : NotificationListenerService() {
      */
     private fun extractAmount(text: String): Long {
         try {
-            // Regex mencari pola Rp/IDR yang diikuti nominal angka
             val regex = Regex("""(?:Rp\.?|IDR)\s*([0-9.,]+)""", RegexOption.IGNORE_CASE)
             val match = regex.find(text)
             if (match != null) {
@@ -172,8 +168,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         try {
             eventSink?.success(payload)
         } catch (e: Exception) {
-            // Flutter UI sedang tidak mendengarkan / background
+            // Flutter UI sedang background
         }
     }
 }
-

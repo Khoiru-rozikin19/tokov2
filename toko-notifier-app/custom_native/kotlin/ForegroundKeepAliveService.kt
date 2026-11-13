@@ -1,4 +1,4 @@
-package com.tokovpn.notifier
+package com.tokovpn.toko_notifier
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -32,7 +32,6 @@ class ForegroundKeepAliveService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        // START_STICKY membuat sistem Android otomatis membangkitkan kembali service ini jika terpaksa di-kill
         return START_STICKY
     }
 

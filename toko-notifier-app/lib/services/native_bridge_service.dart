@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NativeBridgeService {
-  static const MethodChannel _methodChannel = MethodChannel('com.tokovpn.notifier/methods');
-  static const EventChannel _eventChannel = EventChannel('com.tokovpn.notifier/events');
+  static const MethodChannel _methodChannel = MethodChannel('com.tokovpn.toko_notifier/methods');
+  static const EventChannel _eventChannel = EventChannel('com.tokovpn.toko_notifier/events');
 
   // Keys SharedPreferences
   static const String keyServiceEnabled = 'service_enabled';

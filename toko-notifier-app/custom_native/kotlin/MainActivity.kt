@@ -1,6 +1,5 @@
-package com.tokovpn.notifier
+package com.tokovpn.toko_notifier
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -16,8 +15,8 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val METHOD_CHANNEL = "com.tokovpn.notifier/methods"
-    private val EVENT_CHANNEL = "com.tokovpn.notifier/events"
+    private val METHOD_CHANNEL = "com.tokovpn.toko_notifier/methods"
+    private val EVENT_CHANNEL = "com.tokovpn.toko_notifier/events"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -126,12 +125,10 @@ class MainActivity : FlutterActivity() {
         val result = mutableListOf<Map<String, String>>()
 
         for (app in apps) {
-            // Prioritaskan aplikasi non-sistem atau aplikasi perbankan/e-wallet umum
             val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
             val appName = pm.getApplicationLabel(app).toString()
             val packageName = app.packageName
 
-            // Masukkan aplikasi pengguna atau aplikasi yang berbau bank/fintech/wallet
             if (!isSystem || packageName.contains("bank") || packageName.contains("pay") || packageName.contains("dana") || packageName.contains("ovo")) {
                 val item = HashMap<String, String>()
                 item["packageName"] = packageName
@@ -140,7 +137,6 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Urutkan berdasarkan nama aplikasi
         result.sortBy { it["appName"]?.lowercase() }
         return result
     }

@@ -1,4 +1,4 @@
-package com.tokovpn.notifier
+package com.tokovpn.toko_notifier
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -22,7 +22,6 @@ class BootCompletedReceiver : BroadcastReceiver() {
             action == "com.htc.intent.action.QUICKBOOT_POWERON" ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED) {
 
-            // Cek apakah user mengaktifkan service
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val isEnabled = prefs.getBoolean("flutter.service_enabled", true)
 
@@ -42,4 +41,3 @@ class BootCompletedReceiver : BroadcastReceiver() {
         }
     }
 }
-

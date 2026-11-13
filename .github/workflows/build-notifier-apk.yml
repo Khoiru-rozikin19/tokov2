@@ -34,22 +34,18 @@ jobs:
       - name: Scaffold Official Flutter Android Environment
         run: |
           echo "==> Creating clean Flutter Android scaffold..."
-          flutter create --org com.tokovpn --project-name notifier --platforms android official_template
+          flutter create --org com.tokovpn --project-name toko_notifier --platforms android official_template
           
           echo "==> Replacing android directory with official scaffolding..."
           rm -rf toko-notifier-app/android
           cp -r official_template/android toko-notifier-app/android
           
-          echo "==> Ensuring namespace and applicationId are com.tokovpn.notifier..."
-          sed -i 's/namespace = .*/namespace = "com.tokovpn.notifier"/g' toko-notifier-app/android/app/build.gradle
-          sed -i 's/applicationId = .*/applicationId = "com.tokovpn.notifier"/g' toko-notifier-app/android/app/build.gradle
-          
           echo "==> Injecting custom AndroidManifest.xml and Kotlin services..."
           cp -f toko-notifier-app/custom_native/AndroidManifest.xml toko-notifier-app/android/app/src/main/AndroidManifest.xml
           
           rm -rf toko-notifier-app/android/app/src/main/kotlin/*
-          mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier
-          cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/notifier/
+          mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier
+          cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier/
           
           echo "==> Making gradlew executable..."
           chmod +x toko-notifier-app/android/gradlew
@@ -64,12 +60,13 @@ jobs:
           set -o pipefail
           flutter build apk --release --verbose 2>&1 | tee build_output.log
 
-      - name: Upload Build Log On Failure
+      - name: Report Build Error Details
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-failure-log
-          path: toko-notifier-app/build_output.log
+        run: |
+          echo "### ⚠️ Detail Error Build APK" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 120 toko-notifier-app/build_output.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload APK Artifact
         if: success()
