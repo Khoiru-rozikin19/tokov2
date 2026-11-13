@@ -1,0 +1,47 @@
+name: Build Android APK (Toko Notifier)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'd:/laravel/toko-notifier-app/**'
+      - '.github/workflows/build-notifier-apk.yml'
+
+jobs:
+  build:
+    name: Build Toko Notifier APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get Dependencies
+        working-directory: toko-notifier-app
+        run: flutter pub get
+
+      - name: Build APK Release
+        working-directory: toko-notifier-app
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toko-notifier-release
+          path: toko-notifier-app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
