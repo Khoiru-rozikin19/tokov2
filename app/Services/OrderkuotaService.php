@@ -398,6 +398,63 @@ class OrderkuotaService
     }
 
     /**
+     * Send current snapshot of all supplier products status to Admin via WhatsApp.
+     */
+    public function sendManualStatusToAdmin(): array
+    {
+        $adminPhone = Setting::get('whatsapp_bot_admin_phone');
+        if (empty($adminPhone)) {
+            return [
+                'success' => false,
+                'message' => 'Nomor WhatsApp Pribadi Admin belum diatur di menu Bot WhatsApp.'
+            ];
+        }
+
+        $products = \App\Models\Product::whereNotNull('orderkuota_product_code')
+            ->where('orderkuota_product_code', '!=', '')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        if ($products->isEmpty()) {
+            return [
+                'success' => false,
+                'message' => 'Tidak ada produk yang terhubung dengan kode supplier OKEConnect.'
+            ];
+        }
+
+        $date = date('d-m-Y H:i:s');
+        $lines = [];
+        foreach ($products as $product) {
+            $code = strtoupper(trim($product->orderkuota_product_code));
+            $statusIcon = strtolower($product->status) === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
+            $lines[] = "• *{$product->name}* ({$code})\n  Status: {$statusIcon}";
+        }
+
+        $listText = implode("\n\n", $lines);
+
+        $message = "📊 *STATUS STOK PRODUK OKECONNECT (MANUAL CHECK)*\n"
+                 . "📅 Waktu: {$date}\n\n"
+                 . "Berikut status terkini produk supplier Anda:\n\n"
+                 . "{$listText}\n\n"
+                 . "ℹ️ _Pesan permintaan cek stok manual sistem RZK Store._";
+
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $sent = $whatsappService->sendToAdmin($message);
+
+        if ($sent) {
+            return [
+                'success' => true,
+                'message' => "Laporan status produk berhasil dikirim ke nomor WhatsApp {$adminPhone}!"
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Gagal mengirim pesan ke WhatsApp. Pastikan gateway bot aktif dan terhubung.'
+        ];
+    }
+
+    /**
      * Send WhatsApp notification to Admin when products change status (Open <-> Close).
      */
     protected function notifyAdminProductStatusChanges(array $changes): void

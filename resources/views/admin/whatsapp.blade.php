@@ -113,7 +113,13 @@
                     <div class="space-y-1.5">
                         <label for="whatsapp_bot_admin_phone" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Nomor WhatsApp Pribadi Admin</label>
                         <input type="text" id="whatsapp_bot_admin_phone" name="whatsapp_bot_admin_phone" value="{{ $adminPhone }}" placeholder="Contoh: 08123456789 atau 628123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
-                        <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Nomor WA Anda untuk menerima notifikasi otomatis ketika ada perubahan status produk OKEConnect (Open ↔ Close).</p>
+                        <div class="flex items-center justify-between pt-1">
+                            <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Nomor WA Anda untuk menerima notifikasi otomatis ketika ada perubahan status produk OKEConnect (Open ↔ Close).</p>
+                            <button type="button" id="btn-check-stock-admin" onclick="checkStockToAdminWa()" class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline flex items-center space-x-1 whitespace-nowrap ml-2">
+                                <span>📲</span> <span>Kirim Cek Stok ke WA Saya</span>
+                            </button>
+                        </div>
+                        <div id="check-stock-result" class="hidden p-2.5 rounded-xl text-xs font-bold mt-2"></div>
                     </div>
 
                     <!-- API URL Gateway -->
@@ -279,6 +285,45 @@
         if (selectEl.value) {
             document.getElementById('whatsapp_bot_group_id').value = selectEl.value;
         }
+    }
+
+    function checkStockToAdminWa() {
+        const btn = document.getElementById('btn-check-stock-admin');
+        const resultDiv = document.getElementById('check-stock-result');
+        const originalHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> <span>Mengirim...</span>';
+        resultDiv.className = 'p-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 mt-2';
+        resultDiv.textContent = 'Memeriksa stok OKEConnect dan mengirim ke nomor WhatsApp Anda...';
+        resultDiv.classList.remove('hidden');
+
+        fetch('{{ route("admin.whatsapp.check_stock_admin") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+
+            if (data.success) {
+                resultDiv.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-2';
+                resultDiv.textContent = '🚀 ' + data.message;
+            } else {
+                resultDiv.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-50 text-red-700 border border-red-200 mt-2';
+                resultDiv.textContent = '❌ ' + (data.message || 'Gagal mengirim laporan stok.');
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            resultDiv.className = 'p-2.5 rounded-xl text-xs font-bold bg-red-50 text-red-700 border border-red-200 mt-2';
+            resultDiv.textContent = '❌ Terjadi kesalahan jaringan saat memproses permintaan.';
+        });
     }
 
     function sendBroadcastGroup() {

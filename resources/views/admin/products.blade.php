@@ -10,6 +10,11 @@
         </div>
         <div class="mt-4 sm:mt-0 flex items-center space-x-3">
             @if(auth()->user()->role === 'admin')
+            <button type="button" onclick="sendStockReportToAdminWa()" id="btn-wa-stock-report" class="flex items-center space-x-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition-all duration-200" title="Kirim status stok terkini OKEConnect ke WhatsApp Admin">
+                <span>📲</span>
+                <span class="hidden sm:inline">Cek Stok ke WA</span>
+                <span class="sm:hidden">Ke WA</span>
+            </button>
             <form action="{{ route('admin.products.sync_okeconnect') }}" method="POST" class="inline">
                 @csrf
                 <button type="submit" class="flex items-center space-x-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 active:scale-95 transition-all duration-200">
@@ -963,5 +968,36 @@
             createCategoryFromModal();
         }
     });
+
+    function sendStockReportToAdminWa() {
+        const btn = document.getElementById('btn-wa-stock-report');
+        if (!btn) return;
+        const originalHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳ Mengirim...</span>';
+
+        fetch('{{ route("admin.whatsapp.check_stock_admin") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert(data.message || (data.success ? 'Berhasil dikirim ke WhatsApp!' : 'Gagal mengirim.'));
+            if (data.success) {
+                window.location.reload();
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert('Terjadi kesalahan jaringan saat mengirim laporan ke WhatsApp.');
+        });
+    }
 </script>
 @endsection

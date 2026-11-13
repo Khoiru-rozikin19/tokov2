@@ -556,6 +556,27 @@ class AdminController extends Controller
     }
 
     /**
+     * Trigger manual check and send current product statuses to Admin via WhatsApp.
+     */
+    public function whatsappCheckStockAdmin()
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.'
+            ], 403);
+        }
+
+        // Jalankan sinkronisasi status terbaru terlebih dahulu (notifikasi perubahan otomatis tetap bekerja jika ada yg berubah)
+        app(\App\Services\OrderkuotaService::class)->syncProductStatuses();
+
+        // Kirim status terkini semua produk ke WA admin
+        $result = app(\App\Services\OrderkuotaService::class)->sendManualStatusToAdmin();
+
+        return response()->json($result);
+    }
+
+    /**
      * Display User Management dashboard with 2 tabs.
      */
     public function userManagement()
