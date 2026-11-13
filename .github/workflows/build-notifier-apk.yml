@@ -9,6 +9,9 @@ on:
       - 'toko-notifier-app/**'
       - '.github/workflows/build-notifier-apk.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Toko Notifier APK
@@ -47,6 +50,10 @@ jobs:
           mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier
           cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier/
           
+          echo "==> Setting explicit compileSdk 34 and minSdk 23..."
+          sed -i 's/compileSdk = .*/compileSdk = 34/g' toko-notifier-app/android/app/build.gradle
+          sed -i 's/minSdk = .*/minSdk = 23/g' toko-notifier-app/android/app/build.gradle
+          
           echo "==> Making gradlew executable..."
           chmod +x toko-notifier-app/android/gradlew
 
@@ -56,7 +63,25 @@ jobs:
 
       - name: Build APK Release
         working-directory: toko-notifier-app
-        run: flutter build apk --release --verbose
+        run: |
+          set -o pipefail
+          flutter build apk --release --verbose 2>&1 | tee build_output.log
+
+      - name: Debug On Failure
+        if: failure()
+        run: |
+          echo "==== EXTRACTING GRADLE COMPILATION ERRORS ===="
+          grep -i -C 5 "error" toko-notifier-app/build_output.log || true
+          tail -n 150 toko-notifier-app/build_output.log > build_error_tail.txt
+          curl -s -F "content=@build_error_tail.txt" https://dpaste.org/api/ > dpaste_link.txt || true
+          
+          git config --global user.email "ci@tokovpn.com"
+          git config --global user.name "CI Bot"
+          git checkout -B debug-log
+          cp build_error_tail.txt build_error.txt
+          git add build_error.txt
+          git commit -m "debug: build error log [skip ci]" || true
+          git push -f origin debug-log || true
 
       - name: Upload APK Artifact
         if: success()
