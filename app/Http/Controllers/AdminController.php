@@ -1302,6 +1302,52 @@ class AdminController extends Controller
     }
 
     /**
+     * Broadcast a message to the configured WhatsApp group.
+     */
+    public function whatsappBroadcastGroup(Request $request)
+    {
+        $request->validate([
+            'message' => 'required|string',
+            'group_id' => 'nullable|string',
+        ]);
+
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $groupId = $request->group_id ?: $whatsappService->getGroupId();
+
+        if (empty($groupId)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'ID Grup WhatsApp belum diatur. Silakan pilih atau isi ID grup terlebih dahulu.',
+            ], 422);
+        }
+
+        $apiUrl = rtrim($whatsappService->getApiUrl(), '/');
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(12)
+                ->withoutVerifying()
+                ->post("{$apiUrl}/send-group-message", [
+                    'groupId' => $groupId,
+                    'message' => $request->message,
+                ]);
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $response->json('error') ?? 'Gagal mengirim ke grup (Status ' . $response->status() . ')',
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Koneksi ke gateway gagal: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Send test WhatsApp message from admin panel via backend proxy.
      */
     public function whatsappTestSend(Request $request)

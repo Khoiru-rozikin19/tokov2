@@ -131,10 +131,40 @@
                 </form>
             </div>
 
+            <!-- Broadcast ke Grup Card -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+                <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center justify-between">
+                    <span class="flex items-center space-x-2">
+                        <span>📢</span> <span>Broadcast Pesan ke Grup WhatsApp</span>
+                    </span>
+                    <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 font-mono">
+                        {{ $groupId ?: 'Grup belum disimpan' }}
+                    </span>
+                </h4>
+
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label for="broadcast_message" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Isi Pesan Broadcast</label>
+                        <textarea id="broadcast_message" rows="4" placeholder="Ketik pesan informasi, promo, atau pengumuman yang ingin dikirim ke grup WhatsApp..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium transition-all duration-200 leading-relaxed"></textarea>
+                        <p class="text-[11px] text-slate-450 dark:text-slate-500 font-medium">Mendukung format teks WhatsApp: *tebal*, _miring_, ~coret~, dan baris baru.</p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                            Pesan akan dikirim langsung ke grup: <strong class="text-blue-600 dark:text-blue-400 font-semibold">RZK store</strong>
+                        </div>
+                        <button type="button" id="btn-broadcast-group" onclick="sendBroadcastGroup()" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs transition duration-200 shadow-md shadow-blue-500/20 active:scale-95 flex items-center space-x-2">
+                            <span>📢</span> <span>Kirim Broadcast Sekarang</span>
+                        </button>
+                    </div>
+                    <div id="broadcast-result" class="hidden p-3.5 rounded-xl text-xs font-bold"></div>
+                </div>
+            </div>
+
             <!-- Testing Card -->
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
                 <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center space-x-2">
-                    <span>✉️</span> <span>Uji Coba Kirim Pesan</span>
+                    <span>✉️</span> <span>Uji Coba Kirim Pesan Personal</span>
                 </h4>
 
                 <div class="space-y-4">
@@ -249,6 +279,62 @@
         if (selectEl.value) {
             document.getElementById('whatsapp_bot_group_id').value = selectEl.value;
         }
+    }
+
+    function sendBroadcastGroup() {
+        const messageInput = document.getElementById('broadcast_message');
+        const message = messageInput.value.trim();
+        const groupId = document.getElementById('whatsapp_bot_group_id').value.trim();
+        const resultDiv = document.getElementById('broadcast-result');
+        const btn = document.getElementById('btn-broadcast-group');
+
+        if (!message) {
+            alert('Silakan tulis isi pesan broadcast terlebih dahulu.');
+            messageInput.focus();
+            return;
+        }
+
+        if (!groupId) {
+            alert('ID Grup belum diatur! Silakan pilih atau isi ID Grup WhatsApp di atas.');
+            return;
+        }
+
+        const originalBtnHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> <span>Mengirim...</span>';
+
+        resultDiv.className = 'p-3.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700';
+        resultDiv.textContent = 'Sedang menyiarkan pesan ke grup WhatsApp...';
+        resultDiv.classList.remove('hidden');
+
+        fetch('{{ route("admin.whatsapp.broadcast_group") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ message, group_id: groupId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+
+            if (data.success) {
+                resultDiv.className = 'p-3.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                resultDiv.textContent = '🚀 Sukses! Pesan broadcast berhasil terkirim ke grup WhatsApp.';
+                messageInput.value = '';
+            } else {
+                resultDiv.className = 'p-3.5 rounded-xl text-xs font-bold bg-red-50 text-red-700 border border-red-200';
+                resultDiv.textContent = '❌ Gagal mengirim broadcast: ' + (data.error || 'Terjadi kesalahan sistem.');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+            resultDiv.className = 'p-3.5 rounded-xl text-xs font-bold bg-red-50 text-red-700 border border-red-200';
+            resultDiv.textContent = '❌ Terjadi kesalahan jaringan saat mengirim broadcast.';
+        });
     }
 
     function sendTestMessage() {
