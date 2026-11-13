@@ -33,17 +33,17 @@ jobs:
 
       - name: Scaffold Official Flutter Android Environment
         run: |
-          echo "==> Creating clean Flutter Android scaffold..."
+          echo "==> Creating clean Flutter Android scaffold matching project..."
           flutter create --org com.tokovpn --project-name toko_notifier --platforms android official_template
           
           echo "==> Replacing android directory with official scaffolding..."
           rm -rf toko-notifier-app/android
           cp -r official_template/android toko-notifier-app/android
           
-          echo "==> Injecting custom AndroidManifest.xml and Kotlin services..."
-          cp -f toko-notifier-app/custom_native/AndroidManifest.xml toko-notifier-app/android/app/src/main/AndroidManifest.xml
+          echo "==> Injecting permissions & services into official AndroidManifest.xml..."
+          python3 toko-notifier-app/inject_manifest.py toko-notifier-app/android/app/src/main/AndroidManifest.xml
           
-          rm -rf toko-notifier-app/android/app/src/main/kotlin/*
+          echo "==> Copying custom Kotlin services..."
           mkdir -p toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier
           cp -f toko-notifier-app/custom_native/kotlin/*.kt toko-notifier-app/android/app/src/main/kotlin/com/tokovpn/toko_notifier/
           
@@ -56,17 +56,7 @@ jobs:
 
       - name: Build APK Release
         working-directory: toko-notifier-app
-        run: |
-          set -o pipefail
-          flutter build apk --release --verbose 2>&1 | tee build_output.log
-
-      - name: Report Build Error Details
-        if: failure()
-        run: |
-          echo "### ⚠️ Detail Error Build APK" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -n 120 toko-notifier-app/build_output.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+        run: flutter build apk --release --verbose
 
       - name: Upload APK Artifact
         if: success()
