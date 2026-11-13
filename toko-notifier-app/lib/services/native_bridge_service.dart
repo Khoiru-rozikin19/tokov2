@@ -66,11 +66,15 @@ class NativeBridgeService {
 
   Future<List<Map<String, String>>> getInstalledApps() async {
     try {
-      final List<dynamic> apps = await _methodChannel.invokeMethod('getInstalledApps');
+      final List<dynamic>? apps = await _methodChannel.invokeMethod('getInstalledApps');
+      if (apps == null) return [];
       return apps.map((app) {
+        final map = Map<dynamic, dynamic>.from(app as Map);
+        final name = (map['name'] ?? map['appName'] ?? '').toString();
+        final pkg = (map['package_name'] ?? map['packageName'] ?? '').toString();
         return {
-          'name': (app['name'] ?? '').toString(),
-          'package_name': (app['package_name'] ?? '').toString(),
+          'name': name.isNotEmpty ? name : pkg,
+          'package_name': pkg,
         };
       }).toList();
     } catch (e) {

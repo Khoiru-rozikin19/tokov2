@@ -28,8 +28,8 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = widget.installedApps.where((app) {
-      final name = (app['name'] ?? '').toLowerCase();
-      final pkg = (app['package_name'] ?? '').toLowerCase();
+      final name = (app['name'] ?? app['appName'] ?? '').toLowerCase();
+      final pkg = (app['package_name'] ?? app['packageName'] ?? '').toLowerCase();
       final query = _searchQuery.toLowerCase();
       return name.contains(query) || pkg.contains(query);
     }).toList();
@@ -134,8 +134,8 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
                     separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
                     itemBuilder: (context, index) {
                       final app = filtered[index];
-                      final pkg = app['package_name'] ?? '';
-                      final name = app['name'] ?? '';
+                      final pkg = (app['package_name'] ?? app['packageName'] ?? '').toString();
+                      final name = (app['name'] ?? app['appName'] ?? pkg).toString();
                       final isChecked = _selected.contains(pkg);
 
                       return CheckboxListTile(

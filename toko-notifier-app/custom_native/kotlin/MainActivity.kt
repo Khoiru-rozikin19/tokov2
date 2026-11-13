@@ -126,18 +126,25 @@ class MainActivity : FlutterActivity() {
 
         for (app in apps) {
             val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val appName = pm.getApplicationLabel(app).toString()
+            val appName = try {
+                pm.getApplicationLabel(app).toString()
+            } catch (e: Exception) {
+                app.packageName
+            }
             val packageName = app.packageName
 
+            // Tampilkan semua aplikasi pengguna dan aplikasi perbankan/e-wallet
             if (!isSystem || packageName.contains("bank") || packageName.contains("pay") || packageName.contains("dana") || packageName.contains("ovo")) {
                 val item = HashMap<String, String>()
+                item["name"] = if (appName.isNotEmpty()) appName else packageName
+                item["package_name"] = packageName
+                item["appName"] = if (appName.isNotEmpty()) appName else packageName
                 item["packageName"] = packageName
-                item["appName"] = appName
                 result.add(item)
             }
         }
 
-        result.sortBy { it["appName"]?.lowercase() }
+        result.sortBy { it["name"]?.lowercase() }
         return result
     }
 }
