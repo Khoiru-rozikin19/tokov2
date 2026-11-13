@@ -43,6 +43,10 @@ jobs:
           rm -rf toko-notifier-app/android
           cp -r official_template/android toko-notifier-app/android
           
+          echo "==> Updating Kotlin version to 1.9.24 for latest dependency compatibility..."
+          sed -i -E 's/("org\.jetbrains\.kotlin\.android" version ")[^"]+(")/\11.9.24\2/g' toko-notifier-app/android/settings.gradle
+          sed -i -E "s/('org\.jetbrains\.kotlin\.android' version ')[^']+(')/\11.9.24\2/g" toko-notifier-app/android/settings.gradle
+          
           echo "==> Injecting permissions & services into official AndroidManifest.xml..."
           python3 toko-notifier-app/inject_manifest.py toko-notifier-app/android/app/src/main/AndroidManifest.xml
           
@@ -53,6 +57,11 @@ jobs:
           echo "==> Setting explicit compileSdk 34 and minSdk 23..."
           sed -i 's/compileSdk = .*/compileSdk = 34/g' toko-notifier-app/android/app/build.gradle
           sed -i 's/minSdk = .*/minSdk = 23/g' toko-notifier-app/android/app/build.gradle
+          sed -i 's/targetSdk = .*/targetSdk = 34/g' toko-notifier-app/android/app/build.gradle
+          
+          echo "==> Ensuring AndroidX and Jetifier in gradle.properties..."
+          echo "android.useAndroidX=true" >> toko-notifier-app/android/gradle.properties
+          echo "android.enableJetifier=true" >> toko-notifier-app/android/gradle.properties
           
           echo "==> Making gradlew executable..."
           chmod +x toko-notifier-app/android/gradlew
@@ -72,7 +81,7 @@ jobs:
         run: |
           echo "==== EXTRACTING GRADLE COMPILATION ERRORS ===="
           grep -i -C 5 "error" toko-notifier-app/build_output.log || true
-          tail -n 150 toko-notifier-app/build_output.log > build_error_tail.txt
+          tail -n 350 toko-notifier-app/build_output.log > build_error_tail.txt
           curl -s -F "content=@build_error_tail.txt" https://dpaste.org/api/ > dpaste_link.txt || true
           
           git config --global user.email "ci@tokovpn.com"
