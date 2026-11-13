@@ -149,5 +149,15 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
             Route::post('/family/quota', [XlToolController::class, 'setFamilyQuotaLimit'])->name('family.quota');
         });
 
+        // Admin Tools - Fix Storage Link Gambar Produk
+        Route::get('/tools/storage-link', function () {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('storage:link');
+                return redirect()->back()->with('success', 'Symbolic link storage berhasil dibuat! Gambar produk sekarang bisa tampil.');
+            } catch (\Exception $e) {
+                return redirect()->back()->with('error', 'Gagal membuat storage link: ' . $e->getMessage());
+            }
+        })->name('tools.storage_link');
+
     });
 });

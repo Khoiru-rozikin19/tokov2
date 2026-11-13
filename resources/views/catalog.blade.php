@@ -83,8 +83,16 @@
 
                     <!-- Package Icon Container or Product Image -->
                     @if($product->image_path)
-                        <div class="w-full h-20 sm:h-24 mb-3 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
-                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="max-w-full max-h-full object-contain">
+                        <div class="w-full h-20 sm:h-24 mb-3 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center relative">
+                            <img src="{{ asset('storage/' . $product->image_path) }}" 
+                                 alt="{{ $product->name }}" 
+                                 class="max-w-full max-h-full object-contain"
+                                 onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                            <div class="w-full h-full bg-blue-50 dark:bg-blue-950/20 items-center justify-center hidden">
+                                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-blue-500/80" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                </svg>
+                            </div>
                         </div>
                     @else
                         <div class="w-full h-20 sm:h-24 bg-blue-50 dark:bg-blue-950/20 rounded-xl flex items-center justify-center mb-3 border border-blue-100/50 dark:border-blue-950/50">
