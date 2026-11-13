@@ -434,6 +434,29 @@ update_website() {
 
     # 3. Jalankan Migrasi Database Baru & Auto-Repair Admin
     echo -e "\n${YELLOW}Langkah 3: Mendiagnosis database & menjalankan migrasi...${NC}"
+
+    # Pastikan service MySQL/MariaDB menyala sebelum migrasi (cegah error "Connection refused")
+    local env_db_conn=$(grep "^DB_CONNECTION=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"'\''\r')
+    if [ "$env_db_conn" = "mysql" ] || [ "$env_db_conn" = "mariadb" ]; then
+        local db_svc=""
+        if systemctl list-unit-files 2>/dev/null | grep -q "^mysql.service"; then
+            db_svc="mysql"
+        elif systemctl list-unit-files 2>/dev/null | grep -q "^mariadb.service"; then
+            db_svc="mariadb"
+        fi
+        if [ -n "$db_svc" ] && ! systemctl is-active --quiet "$db_svc"; then
+            print_warning "Service database '$db_svc' tidak aktif. Mencoba menyalakan..."
+            systemctl start "$db_svc" 2>/dev/null || true
+            sleep 3
+            if systemctl is-active --quiet "$db_svc"; then
+                systemctl enable "$db_svc" &>/dev/null || true
+                print_success "Service database '$db_svc' berhasil dinyalakan."
+            else
+                print_error "Service database '$db_svc' gagal dinyalakan. Cek: journalctl -u $db_svc -n 50"
+            fi
+        fi
+    fi
+
     if php artisan migrate --force; then
         print_success "Migrasi database berhasil."
     else
