@@ -37,7 +37,7 @@ jobs:
 
       - name: Build APK Release
         working-directory: toko-notifier-app
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -45,3 +45,4 @@ jobs:
           name: toko-notifier-release
           path: toko-notifier-app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
