@@ -1273,6 +1273,35 @@ class AdminController extends Controller
     }
 
     /**
+     * Get list of WhatsApp groups via backend proxy.
+     */
+    public function whatsappGetGroups()
+    {
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $apiUrl = rtrim($whatsappService->getApiUrl(), '/');
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(6)
+                ->withoutVerifying()
+                ->get("{$apiUrl}/groups");
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Gateway merespons dengan status ' . $response->status()
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Koneksi ke gateway gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Send test WhatsApp message from admin panel via backend proxy.
      */
     public function whatsappTestSend(Request $request)

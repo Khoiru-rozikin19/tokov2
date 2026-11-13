@@ -93,8 +93,19 @@
 
                     <!-- Group ID / JID -->
                     <div class="space-y-1.5">
-                        <label for="whatsapp_bot_group_id" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">ID Grup WhatsApp (Tujuan Broadcast)</label>
+                        <div class="flex items-center justify-between">
+                            <label for="whatsapp_bot_group_id" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">ID Grup WhatsApp (Tujuan Broadcast)</label>
+                            <button type="button" onclick="loadWhatsAppGroups()" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline flex items-center space-x-1">
+                                <span>🔍</span> <span>Pilih dari Grup Terdaftar</span>
+                            </button>
+                        </div>
                         <input type="text" id="whatsapp_bot_group_id" name="whatsapp_bot_group_id" value="{{ $groupId }}" placeholder="Contoh: 120363025555555555@g.us atau ID grup Anda" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
+                        <div id="group-select-container" class="hidden mt-2 p-3 bg-slate-100 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Pilih Grup:</span>
+                            <select id="group_select_dropdown" onchange="selectGroupFromDropdown(this)" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none">
+                                <option value="">-- Memuat grup... --</option>
+                            </select>
+                        </div>
                         <p class="text-[10px] text-slate-450 dark:text-slate-500 font-medium">Gunakan ID grup lengkap berakhiran <code>@g.us</code>. Bot akan mem-broadcast update dan status ke grup ini.</p>
                     </div>
 
@@ -209,6 +220,36 @@
     setInterval(checkStatus, 4000);
     // Initial check
     checkStatus();
+
+    function loadWhatsAppGroups() {
+        const container = document.getElementById('group-select-container');
+        const dropdown = document.getElementById('group_select_dropdown');
+        container.classList.remove('hidden');
+        dropdown.innerHTML = '<option value="">⏳ Mengambil daftar grup WhatsApp...</option>';
+
+        fetch('{{ route("admin.whatsapp.groups_ajax") }}')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.groups && data.groups.length > 0) {
+                    let html = '<option value="">-- Pilih Grup Anda --</option>';
+                    data.groups.forEach(g => {
+                        html += `<option value="${g.id}">${g.subject} (${g.id})</option>`;
+                    });
+                    dropdown.innerHTML = html;
+                } else {
+                    dropdown.innerHTML = '<option value="">❌ Tidak ada grup ditemukan. Pastikan nomor bot sudah diundang/masuk ke grup.</option>';
+                }
+            })
+            .catch(() => {
+                dropdown.innerHTML = '<option value="">❌ Gagal memuat grup dari gateway.</option>';
+            });
+    }
+
+    function selectGroupFromDropdown(selectEl) {
+        if (selectEl.value) {
+            document.getElementById('whatsapp_bot_group_id').value = selectEl.value;
+        }
+    }
 
     function sendTestMessage() {
         const phone = document.getElementById('test_phone').value;
