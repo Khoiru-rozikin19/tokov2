@@ -228,8 +228,31 @@ class OrderkuotaService
             ];
         }
 
-        @ini_set('memory_limit', '256M');
-        @set_time_limit(60);
+        @ini_set('memory_limit', '128M');
+        @set_time_limit(30);
+
+        // Ambil produk-produk lokal yang memiliki kode supplier Orderkuota/Okeconnect
+        $products = \App\Models\Product::whereNotNull('orderkuota_product_code')
+            ->where('orderkuota_product_code', '!=', '')
+            ->get();
+
+        if ($products->isEmpty()) {
+            return [
+                'success' => true,
+                'message' => 'Tidak ada produk lokal yang terhubung dengan kode supplier OKEConnect.',
+                'total_parsed' => 0,
+                'updated' => 0,
+            ];
+        }
+
+        // Kumpulkan daftar kode produk target yang ingin dipantau saja (hemat memori drastis)
+        $targetCodes = [];
+        foreach ($products as $p) {
+            $c = strtoupper(trim((string) $p->orderkuota_product_code));
+            if ($c !== '') {
+                $targetCodes[$c] = true;
+            }
+        }
 
         $rawPriceListId = trim((string) (Setting::get('orderkuota_price_list_id') ?: '905ccd028329b0a'));
         // Jika pengguna memasukkan URL lengkap (misal https://okeconnect.com/harga/list?id=905ccd028329b0a), ekstrak parameter id-nya
@@ -245,7 +268,7 @@ class OrderkuotaService
         try {
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 25,
+                    'timeout' => 15,
                     'ignore_errors' => true,
                     'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
                 ]
@@ -253,18 +276,18 @@ class OrderkuotaService
 
             $statuses = [];
 
-            // 1. Utamakan halaman tabel HTML (/harga/list) karena menampilkan status real-time yang akurat (open/close),
-            //    sedangkan endpoint /harga/json dari OKEConnect sering mengembalikan status=1 meskipun produk sedang close.
+            // 1. Utamakan halaman tabel HTML (/harga/list) karena menampilkan status real-time yang akurat (open/close).
+            //    Gunakan preg_match_all secara langsung agar tidak memakan RAM VPS (menghindari explode jutaan karakter).
             $html = @file_get_contents($htmlUrl, false, $context);
             if (!empty($html)) {
-                foreach (explode('</tr>', $html) as $row) {
-                    if (
-                        preg_match('/<tr[^>]*>\s*<td[^>]*>\s*([A-Za-z0-9._-]+)\s*<\/td>/i', $row, $mCode) &&
-                        preg_match('/<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*$/i', $row, $mStatus)
-                    ) {
-                        $codeKey = strtoupper(trim($mCode[1]));
-                        $rawStatus = strtolower(trim($mStatus[1]));
-                        $statuses[$codeKey] = ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close';
+                if (preg_match_all('/<tr[^>]*>\s*<td[^>]*>\s*([A-Za-z0-9._-]+)\s*<\/td>.*?<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*<\/tr>/is', $html, $matches, PREG_SET_ORDER)) {
+                    foreach ($matches as $m) {
+                        $codeKey = strtoupper(trim($m[1]));
+                        // Hanya simpan jika kode tersebut termasuk dalam produk toko kita
+                        if (isset($targetCodes[$codeKey])) {
+                            $rawStatus = strtolower(trim($m[2]));
+                            $statuses[$codeKey] = ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close';
+                        }
                     }
                 }
                 unset($html);
@@ -278,12 +301,13 @@ class OrderkuotaService
                     if (is_array($decoded)) {
                         foreach ($decoded as $item) {
                             $code = isset($item['kode']) ? strtoupper(trim((string) $item['kode'])) : '';
-                            if ($code !== '') {
+                            if ($code !== '' && isset($targetCodes[$code])) {
                                 $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
                                 $statuses[$code] = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
                             }
                         }
                     }
+                    unset($decoded, $jsonBody);
                 }
             }
 
@@ -295,11 +319,6 @@ class OrderkuotaService
                 ];
             }
 
-            // Cari produk-produk lokal yang memiliki kode supplier Orderkuota/Okeconnect
-            $products = \App\Models\Product::whereNotNull('orderkuota_product_code')
-                ->where('orderkuota_product_code', '!=', '')
-                ->get();
-
             $updatedCount = 0;
             $changedProducts = [];
 
@@ -307,23 +326,29 @@ class OrderkuotaService
                 $code = strtoupper(trim($product->orderkuota_product_code));
                 if (isset($statuses[$code])) {
                     $supplierStatus = $statuses[$code];
-                    if ($product->status !== $supplierStatus) {
-                        $oldStatus = $product->status;
-                        $product->update(['status' => $supplierStatus]);
+                    $oldStatus = strtolower(trim((string) ($product->status ?: 'close')));
+                    $newStatus = strtolower(trim((string) $supplierStatus));
+
+                    if ($oldStatus !== $newStatus) {
+                        $product->update(['status' => $newStatus]);
                         $updatedCount++;
                         $changedProducts[] = [
                             'name' => $product->name,
                             'code' => $code,
-                            'old_status' => $oldStatus ?: 'close',
-                            'new_status' => $supplierStatus,
+                            'old_status' => $oldStatus,
+                            'new_status' => $newStatus,
                         ];
                     }
                 }
             }
 
-            // Kirim notifikasi WhatsApp ke nomor admin jika ada perubahan status produk
+            // Kirim notifikasi WhatsApp ke nomor admin jika ada perubahan status produk (dengan proteksi anti-spam)
             if (!empty($changedProducts)) {
-                $this->notifyAdminProductStatusChanges($changedProducts);
+                $cacheKey = 'notif_admin_status_' . md5(json_encode($changedProducts));
+                if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+                    $this->notifyAdminProductStatusChanges($changedProducts);
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addMinutes(15));
+                }
             }
 
             // Process any pending pre-orders that are now open

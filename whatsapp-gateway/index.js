@@ -28,6 +28,11 @@ async function connectToWhatsApp() {
         auth: state,
         logger: pino({ level: 'silent' }),
         browser: Browsers.macOS('Desktop'),
+        syncFullHistory: false, // Matikan sync riwayat agar hemat RAM VPS secara drastis
+        markOnlineOnConnect: false,
+        generateHighQualityLinkPreview: false,
+        shouldIgnoreJid: (jid) => jid.endsWith('@broadcast') || jid.includes('status'), // Abaikan status WA kontak lain
+        getMessage: async () => undefined,
     });
     
     sock.ev.on('connection.update', async (update) => {
@@ -88,12 +93,6 @@ app.post('/send-message', async (req, res) => {
             formattedPhone = '62' + formattedPhone.slice(1);
         }
         const jid = `${formattedPhone}@s.whatsapp.net`;
-        
-        // Verifikasi keaktifan nomor pada WhatsApp
-        const check = await sock.onWhatsApp(jid);
-        if (!check || check.length === 0 || !check[0].exists) {
-            return res.status(400).json({ error: 'Nomor WhatsApp tidak terdaftar' });
-        }
         
         const sentMsg = await sock.sendMessage(jid, { text: message });
         res.json({ success: true, messageId: sentMsg.key.id });
