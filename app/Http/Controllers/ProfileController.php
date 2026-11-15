@@ -55,6 +55,12 @@ class ProfileController extends Controller
             ->where('id', 'not like', 'TOP-%')
             ->count();
 
+        // Self-healing: jika user berstatus buyer namun seller_request masih 'approved', reset ke 'none'
+        if ($user->role === 'buyer' && $user->seller_request === 'approved') {
+            $user->update(['seller_request' => 'none']);
+            $user->refresh();
+        }
+
         return view('profile', [
             'title' => 'Profil Saya',
             'user' => $user,

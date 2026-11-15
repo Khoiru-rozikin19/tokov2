@@ -85,7 +85,15 @@
             <!-- 5. Role -->
             <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/30 border border-slate-150 dark:border-slate-800/80">
                 <span class="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role</span>
-                <p class="mt-1 text-sm font-bold text-blue-600 dark:text-blue-400">{{ ucfirst($user->role) }}</p>
+                <div class="mt-1 flex items-center justify-between">
+                    <p class="text-sm font-bold text-blue-600 dark:text-blue-400">{{ ucfirst($user->role) }}</p>
+                    @if($user->role === 'buyer')
+                        <button type="button" onclick="switchProfileMainTab('menu'); setTimeout(() => document.getElementById('upgradeSellerCard')?.scrollIntoView({behavior: 'smooth'}), 100);" class="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center space-x-1">
+                            <span>Ajukan Seller</span>
+                            <span>&rarr;</span>
+                        </button>
+                    @endif
+                </div>
             </div>
 
             <!-- 6. Tanggal Mendaftar -->
@@ -260,19 +268,6 @@
             </form>
         </div>
 
-        <!-- 4. Logout (Di bawah Pengaturan Password) -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full flex items-center justify-center space-x-2.5 px-6 py-3.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold active:scale-95 transition-all duration-200">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                    </svg>
-                    <span>Logout / Keluar Akun</span>
-                </button>
-            </form>
-        </div>
-
         <!-- Upgrade Account Portal (If role is buyer) -->
         @if($user->role === 'buyer')
             @php
@@ -280,7 +275,7 @@
                 $minBalance = 100000;
                 $isEligible = $userBalance >= $minBalance;
             @endphp
-            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+            <div id="upgradeSellerCard" class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
                 <!-- Header -->
                 <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div class="flex items-center space-x-3">
@@ -360,7 +355,42 @@
 
                 <!-- Tombol Aksi Pengajuan -->
                 <div class="pt-2">
-                    @if($user->seller_request === 'none')
+                    @if($user->seller_request === 'pending')
+                        <div class="inline-flex items-center space-x-2.5 px-5 py-3.5 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 rounded-2xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></span>
+                            <span>Pengajuan Terkirim — Menunggu Persetujuan Admin</span>
+                        </div>
+                    @elseif($user->seller_request === 'rejected')
+                        <div class="space-y-3">
+                            <div class="inline-flex items-center space-x-2.5 px-4 py-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-2xl text-xs font-bold">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+                                <span>Pengajuan Terakhir Ditolak oleh Admin</span>
+                            </div>
+                            <div>
+                                @if($isEligible)
+                                    <form action="{{ route('buyer.request-seller') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
+                                            Ajukan Ulang Menjadi Seller
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                        <button type="button" disabled title="Saldo akun Anda minimal harus Rp 100.000 untuk mengajukan upgrade seller" class="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3.5 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl text-xs sm:text-sm font-bold cursor-not-allowed transition-all opacity-75">
+                                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"></path>
+                                            </svg>
+                                            <span>Ajukan Ulang Menjadi Seller (Terkunci)</span>
+                                        </button>
+                                        <span class="text-xs text-slate-400 dark:text-slate-500">
+                                            *Tombol baru bisa diklik setelah saldo akun Anda terisi minimal Rp 100.000.
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        {{-- Untuk status 'none', 'approved' (user pernah jadi seller lalu diubah lagi jadi buyer), dsb --}}
                         @if($isEligible)
                             <form action="{{ route('buyer.request-seller') }}" method="POST">
                                 @csrf
@@ -384,36 +414,23 @@
                                 </span>
                             </div>
                         @endif
-                    @elseif($user->seller_request === 'pending')
-                        <div class="inline-flex items-center space-x-2.5 px-5 py-3.5 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 rounded-2xl text-xs font-bold">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></span>
-                            <span>Pengajuan Terkirim — Menunggu Persetujuan Admin</span>
-                        </div>
-                    @elseif($user->seller_request === 'rejected')
-                        <div class="space-y-3">
-                            <div class="inline-flex items-center space-x-2.5 px-4 py-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-2xl text-xs font-bold">
-                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
-                                <span>Pengajuan Terakhir Ditolak oleh Admin</span>
-                            </div>
-                            <div>
-                                @if($isEligible)
-                                    <form action="{{ route('buyer.request-seller') }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
-                                            Ajukan Ulang Menjadi Seller
-                                        </button>
-                                    </form>
-                                @else
-                                    <button type="button" disabled class="w-full sm:w-auto px-6 py-3.5 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl text-xs sm:text-sm font-bold cursor-not-allowed opacity-75">
-                                        Ajukan Ulang Menjadi Seller (Terkunci)
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
                     @endif
                 </div>
             </div>
         @endif
+
+        <!-- 4. Logout (Di bawah Upgrade Seller / Pengaturan Password) -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="w-full flex items-center justify-center space-x-2.5 px-6 py-3.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-2xl text-sm font-bold active:scale-95 transition-all duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Logout / Keluar Akun</span>
+                </button>
+            </form>
+        </div>
 
     </div>
 </div>

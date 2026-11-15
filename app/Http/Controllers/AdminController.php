@@ -664,9 +664,18 @@ class AdminController extends Controller
             return redirect()->route('admin.users')->with('error', 'Anda tidak dapat mengubah peran Anda sendiri.');
         }
 
-        $user->update([
+        $updateData = [
             'role' => $request->role,
-        ]);
+        ];
+
+        // Jika role diubah menjadi buyer, reset seller_request ke 'none' agar tombol pengajuan muncul kembali di profile
+        if ($request->role === 'buyer') {
+            $updateData['seller_request'] = 'none';
+        } elseif ($request->role === 'seller') {
+            $updateData['seller_request'] = 'approved';
+        }
+
+        $user->update($updateData);
 
         return redirect()->route('admin.users')->with('success', "Peran untuk user {$user->name} berhasil diubah menjadi " . ucfirst($request->role) . ".");
     }
