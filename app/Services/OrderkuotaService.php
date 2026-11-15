@@ -541,23 +541,32 @@ class OrderkuotaService
         }
 
         $date = date('d-m-Y H:i:s');
-        $lines = [];
+        $adminLines = [];
+        $groupLines = [];
         foreach ($products as $product) {
             $code = strtoupper(trim($product->orderkuota_product_code));
             $statusIcon = strtolower($product->status) === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
             $modalFmt = 'Rp ' . number_format((int) ($product->harga_modal ?? 0), 0, ',', '.');
-            $lines[] = "• *{$product->name}* ({$code})\n  Modal: {$modalFmt} | Status: {$statusIcon}";
+            $adminLines[] = "• *{$product->name}* ({$code})\n  Modal: {$modalFmt} | Status: {$statusIcon}";
+            $groupLines[] = "• *{$product->name}* ({$code})\n  Status: {$statusIcon}";
         }
 
-        $listText = implode("\n\n", $lines);
+        $adminListText = implode("\n\n", $adminLines);
+        $groupListText = implode("\n\n", $groupLines);
 
-        $message = "📊 *STATUS STOK PRODUK OKECONNECT (MANUAL CHECK)*\n"
-                 . "📅 Waktu: {$date}\n\n"
-                 . "Berikut status terkini produk supplier Anda:\n\n"
-                 . "{$listText}\n\n"
-                 . "ℹ️ _Pesan permintaan cek stok manual sistem RZK Store._";
+        $adminMessage = "📊 *STATUS STOK PRODUK OKECONNECT (MANUAL CHECK)*\n"
+                      . "📅 Waktu: {$date}\n\n"
+                      . "Berikut status terkini produk supplier Anda:\n\n"
+                      . "{$adminListText}\n\n"
+                      . "ℹ️ _Pesan permintaan cek stok manual sistem RZK Store._";
 
-        $results = $whatsappService->sendAutomatedNotification('okeconnect_manual_stock', $message);
+        $groupMessage = "📊 *STATUS STOK PRODUK RZK STORE*\n"
+                      . "📅 Waktu: {$date}\n\n"
+                      . "Berikut status ketersediaan produk saat ini:\n\n"
+                      . "{$groupListText}\n\n"
+                      . "ℹ️ _Informasi status produk RZK Store._";
+
+        $results = $whatsappService->sendAutomatedNotification('okeconnect_manual_stock', $adminMessage, $groupMessage);
         $targetsSent = [];
         if (!empty($results['admin'])) {
             $targetsSent[] = "WA Admin ({$adminPhone})";
@@ -676,51 +685,70 @@ class OrderkuotaService
     }
 
     /**
-     * Send WhatsApp notification to Admin and/or Group when products change status or modal price.
+     * Send separate WhatsApp notifications for product status (Open/Close) and supplier modal price changes.
      */
     protected function notifyAdminProductStatusChanges(array $changes): void
     {
         try {
             $whatsappService = app(\App\Services\WhatsappService::class);
-            $sendAdmin = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'admin');
-            $sendGroup = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'group');
-
-            if (!$sendAdmin && !$sendGroup) {
-                return;
-            }
-
             $date = date('d-m-Y H:i:s');
-            $lines = [];
-            foreach ($changes as $item) {
-                $parts = ["• *{$item['name']}* ({$item['code']})"];
-                if (!empty($item['status_changed'])) {
-                    $statusIcon = $item['new_status'] === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
-                    $oldIcon = $item['old_status'] === 'open' ? 'Open' : 'Close';
-                    $parts[] = "  Status: {$oldIcon} ➔ {$statusIcon}";
-                }
-                if (!empty($item['price_changed'])) {
-                    $oldModalFmt = 'Rp ' . number_format((int) $item['old_modal'], 0, ',', '.');
-                    $newModalFmt = 'Rp ' . number_format((int) $item['new_modal'], 0, ',', '.');
-                    $priceLine = "  Modal H2H: {$oldModalFmt} ➔ *{$newModalFmt}*";
-                    if (!empty($item['selling_price']) && (int) $item['new_modal'] >= (int) $item['selling_price']) {
-                        $sellFmt = 'Rp ' . number_format((int) $item['selling_price'], 0, ',', '.');
-                        $priceLine .= "\n  ⚠️ *PERHATIAN:* Modal melebihi/sama dengan Harga Jual ({$sellFmt})!";
+
+            // 1. Notifikasi Update Status Produk (Open / Close) — tanpa informasi harga modal
+            $statusChanges = array_filter($changes, fn($item) => !empty($item['status_changed']));
+            if (!empty($statusChanges)) {
+                $sendStatusAdmin = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'admin');
+                $sendStatusGroup = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'group');
+
+                if ($sendStatusAdmin || $sendStatusGroup) {
+                    $statusLines = [];
+                    foreach ($statusChanges as $item) {
+                        $statusIcon = $item['new_status'] === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
+                        $oldIcon = $item['old_status'] === 'open' ? 'Open' : 'Close';
+                        $statusLines[] = "• *{$item['name']}* ({$item['code']})\n  Status: {$oldIcon} ➔ {$statusIcon}";
                     }
-                    $parts[] = $priceLine;
+
+                    $statusMessage = "📢 *UPDATE STATUS PRODUK (OPEN / CLOSE)*\n"
+                                   . "📅 Waktu: {$date}\n\n"
+                                   . "Terdeteksi perubahan status ketersediaan produk berikut:\n\n"
+                                   . implode("\n\n", $statusLines) . "\n\n"
+                                   . "ℹ️ _Pesan otomatis sistem RZK Store._";
+
+                    $statusResults = $whatsappService->sendAutomatedNotification('okeconnect_status_change', $statusMessage);
+                    Log::info("OrderkuotaService: Notifikasi status produk WA selesai (Admin=" . ($statusResults['admin'] ? 'ok' : 'no') . ", Group=" . ($statusResults['group'] ? 'ok' : 'no') . ").");
                 }
-                $lines[] = implode("\n", $parts);
             }
 
-            $listText = implode("\n\n", $lines);
+            // 2. Notifikasi Update Harga Modal Supplier OKEConnect — terpisah dari status produk
+            $priceChanges = array_filter($changes, fn($item) => !empty($item['price_changed']));
+            if (!empty($priceChanges)) {
+                $sendPriceAdmin = $whatsappService->isAutoTargetEnabled('okeconnect_price_change', 'admin');
+                $sendPriceGroup = $whatsappService->isAutoTargetEnabled('okeconnect_price_change', 'group');
 
-            $message = "📢 *UPDATE PRODUK & MODAL OKEConnect*\n"
-                     . "📅 Waktu: {$date}\n\n"
-                     . "Terdeteksi perubahan otomatis dari supplier pada produk berikut:\n\n"
-                     . "{$listText}\n\n"
-                     . "ℹ️ _Pesan otomatis sistem RZK Store._";
+                if ($sendPriceAdmin || $sendPriceGroup) {
+                    $priceLines = [];
+                    foreach ($priceChanges as $item) {
+                        $oldModalFmt = 'Rp ' . number_format((int) $item['old_modal'], 0, ',', '.');
+                        $newModalFmt = 'Rp ' . number_format((int) $item['new_modal'], 0, ',', '.');
+                        $priceLine = "• *{$item['name']}* ({$item['code']})\n  Modal H2H: {$oldModalFmt} ➔ *{$newModalFmt}*";
 
-            $results = $whatsappService->sendAutomatedNotification('okeconnect_status_change', $message);
-            Log::info("OrderkuotaService: Notifikasi perubahan produk WA selesai (Admin=" . ($results['admin'] ? 'ok' : 'no') . ", Group=" . ($results['group'] ? 'ok' : 'no') . ").");
+                        if (!empty($item['selling_price']) && (int) $item['new_modal'] >= (int) $item['selling_price']) {
+                            $sellFmt = 'Rp ' . number_format((int) $item['selling_price'], 0, ',', '.');
+                            $priceLine .= "\n  ⚠️ *PERHATIAN:* Modal melebihi/sama dengan Harga Jual ({$sellFmt})!";
+                        }
+
+                        $priceLines[] = $priceLine;
+                    }
+
+                    $priceMessage = "💰 *UPDATE HARGA MODAL OKECONNECT*\n"
+                                  . "📅 Waktu: {$date}\n\n"
+                                  . "Terdeteksi perubahan harga modal dari supplier pada produk berikut:\n\n"
+                                  . implode("\n\n", $priceLines) . "\n\n"
+                                  . "ℹ️ _Pesan otomatis sistem RZK Store._";
+
+                    $priceResults = $whatsappService->sendAutomatedNotification('okeconnect_price_change', $priceMessage);
+                    Log::info("OrderkuotaService: Notifikasi harga modal WA selesai (Admin=" . ($priceResults['admin'] ? 'ok' : 'no') . ", Group=" . ($priceResults['group'] ? 'ok' : 'no') . ").");
+                }
+            }
         } catch (\Throwable $e) {
             Log::error("OrderkuotaService notifyAdminProductStatusChanges Exception: " . $e->getMessage());
         }

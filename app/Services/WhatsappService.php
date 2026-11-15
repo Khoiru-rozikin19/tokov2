@@ -206,16 +206,29 @@ class WhatsappService
         return [
             [
                 'key' => 'okeconnect_status_change',
-                'title' => 'Update Status & Harga Modal Produk OKEConnect',
+                'title' => 'Update Status Produk OKEConnect (Open / Close)',
                 'badge' => 'Otomatis Sinkron',
-                'trigger' => 'Dikirim otomatis saat sinkronisasi OKEConnect (tiap 5 menit / tombol sinkron) mendeteksi perubahan status Open ↔ Close atau perubahan harga modal supplier.',
+                'trigger' => 'Dikirim otomatis saat sinkronisasi OKEConnect (tiap 5 menit / tombol sinkron) mendeteksi status produk berubah Open ↔ Close (tanpa info modal).',
+                'default_admin' => '0',
+                'default_group' => '1',
+                'preview' => "📢 *UPDATE STATUS PRODUK (OPEN / CLOSE)*\n"
+                           . "📅 Waktu: 16-11-2026 06:30:00\n\n"
+                           . "Terdeteksi perubahan status ketersediaan produk berikut:\n\n"
+                           . "• *XL 15GB V1* (XLA15)\n"
+                           . "  Status: Open ➔ 🔴 *CLOSE*\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'okeconnect_price_change',
+                'title' => 'Update Harga Modal Supplier OKEConnect',
+                'badge' => 'Otomatis Sinkron',
+                'trigger' => 'Dikirim otomatis saat sinkronisasi OKEConnect mendeteksi perubahan harga modal H2H dari supplier (beserta peringatan jika modal >= harga jual).',
                 'default_admin' => '1',
                 'default_group' => '0',
-                'preview' => "📢 *UPDATE PRODUK & MODAL OKEConnect*\n"
+                'preview' => "💰 *UPDATE HARGA MODAL OKECONNECT*\n"
                            . "📅 Waktu: 16-11-2026 06:30:00\n\n"
-                           . "Terdeteksi perubahan otomatis dari supplier pada produk berikut:\n\n"
+                           . "Terdeteksi perubahan harga modal dari supplier pada produk berikut:\n\n"
                            . "• *XL 15GB V1* (XLA15)\n"
-                           . "  Status: Open ➔ 🔴 *CLOSE*\n"
                            . "  Modal H2H: Rp 14.500 ➔ *Rp 15.000*\n\n"
                            . "ℹ️ _Pesan otomatis sistem RZK Store._",
             ],
