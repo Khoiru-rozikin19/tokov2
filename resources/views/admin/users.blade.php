@@ -100,6 +100,7 @@
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Lengkap</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nomor HP</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Saldo Akun</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tanggal Pengajuan</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Aksi</th>
                                 </tr>
@@ -112,6 +113,11 @@
                                         </td>
                                         <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{{ $user->email }}</td>
                                         <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 font-mono">{{ $user->phone ?? '-' }}</td>
+                                        <td class="px-6 py-4 text-sm">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40">
+                                                Rp {{ number_format($user->getBalance(), 0, ',', '.') }}
+                                            </span>
+                                        </td>
                                         <td class="px-6 py-4 text-xs text-slate-400 dark:text-slate-500">{{ $user->updated_at->isoFormat('D MMMM YYYY, H:mm') }}</td>
                                         <td class="px-6 py-4 text-right">
                                             <div class="flex justify-end space-x-2">

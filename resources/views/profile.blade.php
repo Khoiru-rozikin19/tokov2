@@ -275,50 +275,142 @@
 
         <!-- Upgrade Account Portal (If role is buyer) -->
         @if($user->role === 'buyer')
-            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-                <h3 class="text-base font-bold text-slate-850 dark:text-slate-205 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-2">
-                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"></path>
-                    </svg>
-                    <span>Upgrade Akun Seller</span>
-                </h3>
-                
-                <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-5 bg-slate-50 dark:bg-slate-950/20 p-5 rounded-2xl border border-slate-100/50 dark:border-slate-850">
-                    <div class="space-y-1">
-                        <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Ajukan Sebagai Seller</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
-                            Mulai berbisnis dengan meng-upgrade akun Anda untuk dapat menjual produk digital secara langsung di platform kami dan kelola stok Anda sendiri.
-                        </p>
+            @php
+                $userBalance = $currentBalance ?? $user->getBalance();
+                $minBalance = 100000;
+                $isEligible = $userBalance >= $minBalance;
+            @endphp
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+                <!-- Header -->
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-850 dark:text-slate-100">Upgrade Akun Menjadi Seller</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Dapatkan harga diskon reseller & akses khusus untuk menjual produk</p>
+                        </div>
                     </div>
-                    
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-900/50">
+                        Role: Buyer
+                    </span>
+                </div>
+
+                <!-- Syarat & Ketentuan Card -->
+                <div class="bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-950/40 dark:to-blue-950/20 border border-slate-200/80 dark:border-slate-800 p-5 rounded-2xl space-y-3">
+                    <div class="flex items-center space-x-2 text-slate-800 dark:text-slate-200">
+                        <svg class="w-4.5 h-4.5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"></path>
+                        </svg>
+                        <h4 class="text-xs font-black uppercase tracking-wider">Syarat & Ketentuan Pengajuan Seller</h4>
+                    </div>
+                    <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-2 list-none pl-1 leading-relaxed">
+                        <li class="flex items-start space-x-2">
+                            <span class="text-blue-600 dark:text-blue-400 font-bold">1.</span>
+                            <span><strong>Syarat Minimal Saldo Rp 100.000:</strong> Anda harus melakukan Top Up hingga saldo akun Anda memiliki minimal <strong>Rp 100.000</strong> agar tombol pengajuan dapat diklik.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-emerald-600 dark:text-emerald-400 font-bold">2.</span>
+                            <span><strong>Saldo Utuh & Tidak Dipotong:</strong> Saldo Rp 100.000 tersebut <strong>tidak akan hilang/dipotong</strong> untuk biaya pendaftaran. Saldo tetap menjadi milik Anda sepenuhnya dan bisa digunakan untuk berbelanja produk dengan harga diskon khusus Seller.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-purple-600 dark:text-purple-400 font-bold">3.</span>
+                            <span><strong>Keuntungan Akun Seller:</strong> Berhak mendapatkan potongan harga langsung (harga reseller diskon) di katalog dan fasilitas menjual produk Anda sendiri.</span>
+                        </li>
+                        <li class="flex items-start space-x-2">
+                            <span class="text-amber-600 dark:text-amber-400 font-bold">4.</span>
+                            <span><strong>Proses Persetujuan:</strong> Pengajuan Anda akan ditinjau dan disetujui oleh Admin dalam waktu 1x24 jam.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Status Saldo Box -->
+                <div class="p-4.5 rounded-2xl border {{ $isEligible ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50' : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50' }} flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        @if($user->seller_request === 'none')
-                            <form action="{{ route('buyer.request-seller') }}" method="POST">
-                                @csrf
-                                <button type="submit" class="w-full md:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-500/10 active:scale-95 transition-all duration-200 text-center whitespace-nowrap">
-                                    Ajukan Sekarang
-                                </button>
-                            </form>
-                        @elseif($user->seller_request === 'pending')
-                            <div class="inline-flex items-center space-x-2.5 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-250/20 rounded-2xl text-xs font-bold">
-                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></span>
-                                <span>Menunggu Persetujuan Admin</span>
-                            </div>
-                        @elseif($user->seller_request === 'rejected')
-                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                <div class="inline-flex items-center space-x-2.5 px-4 py-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-250/20 rounded-2xl text-xs font-bold">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
-                                    <span>Pengajuan Terakhir Ditolak</span>
-                                </div>
-                                <form action="{{ route('buyer.request-seller') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="w-full px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all duration-200 text-center whitespace-nowrap">
-                                        Ajukan Lagi
-                                    </button>
-                                </form>
-                            </div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider {{ $isEligible ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' }}">
+                            {{ $isEligible ? '✅ Syarat Saldo Terpenuhi' : '⚠️ Saldo Akun Belum Memenuhi Syarat' }}
+                        </span>
+                        <div class="flex items-baseline space-x-2 mt-1">
+                            <span class="text-xl font-black text-slate-850 dark:text-slate-100">
+                                Rp {{ number_format($userBalance, 0, ',', '.') }}
+                            </span>
+                            <span class="text-xs text-slate-400 dark:text-slate-500">
+                                / Syarat Minimal Rp {{ number_format($minBalance, 0, ',', '.') }}
+                            </span>
+                        </div>
+                        @if(!$isEligible)
+                            <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                                Anda perlu top up minimal <strong>Rp {{ number_format($minBalance - $userBalance, 0, ',', '.') }}</strong> lagi agar tombol dapat diklik.
+                            </p>
                         @endif
                     </div>
+
+                    @if(!$isEligible)
+                        <a href="{{ route('balance.index') }}" class="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+                            </svg>
+                            <span>Top Up Saldo Sekarang</span>
+                        </a>
+                    @endif
+                </div>
+
+                <!-- Tombol Aksi Pengajuan -->
+                <div class="pt-2">
+                    @if($user->seller_request === 'none')
+                        @if($isEligible)
+                            <form action="{{ route('buyer.request-seller') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
+                                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+                                    </svg>
+                                    <span>Ajukan Menjadi Seller</span>
+                                </button>
+                            </form>
+                        @else
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                <button type="button" disabled title="Saldo akun Anda minimal harus Rp 100.000 untuk mengajukan upgrade seller" class="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3.5 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl text-xs sm:text-sm font-bold cursor-not-allowed transition-all opacity-75">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"></path>
+                                    </svg>
+                                    <span>Ajukan Menjadi Seller (Terkunci)</span>
+                                </button>
+                                <span class="text-xs text-slate-400 dark:text-slate-500">
+                                    *Tombol baru bisa diklik setelah saldo akun Anda terisi minimal Rp 100.000.
+                                </span>
+                            </div>
+                        @endif
+                    @elseif($user->seller_request === 'pending')
+                        <div class="inline-flex items-center space-x-2.5 px-5 py-3.5 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 rounded-2xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></span>
+                            <span>Pengajuan Terkirim — Menunggu Persetujuan Admin</span>
+                        </div>
+                    @elseif($user->seller_request === 'rejected')
+                        <div class="space-y-3">
+                            <div class="inline-flex items-center space-x-2.5 px-4 py-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 rounded-2xl text-xs font-bold">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+                                <span>Pengajuan Terakhir Ditolak oleh Admin</span>
+                            </div>
+                            <div>
+                                @if($isEligible)
+                                    <form action="{{ route('buyer.request-seller') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
+                                            Ajukan Ulang Menjadi Seller
+                                        </button>
+                                    </form>
+                                @else
+                                    <button type="button" disabled class="w-full sm:w-auto px-6 py-3.5 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl text-xs sm:text-sm font-bold cursor-not-allowed opacity-75">
+                                        Ajukan Ulang Menjadi Seller (Terkunci)
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         @endif
