@@ -978,122 +978,132 @@ class AdminController extends Controller
     // =====================================================
     //  KOMISI SELLER
     // =====================================================
+    // MANAJEMEN ATUR DISKON PRODUK PER-ROLE
+    // =====================================================
 
     /**
-     * Display commission management page.
+     * Display discount management page.
      */
-    public function commissions()
+    public function discounts()
     {
         if (auth()->user()->role !== 'admin') {
             return abort(403);
         }
 
-        $commissions = \App\Models\SellerCommission::with(['seller', 'product'])
+        $discounts = \App\Models\ProductDiscount::with('product')
             ->orderBy('created_at', 'desc')
-            ->get();
-
-        $sellers = User::whereIn('role', ['seller', 'admin'])
-            ->where('is_verified', true)
-            ->orderBy('name', 'asc')
             ->get();
 
         $products = Product::orderBy('name', 'asc')->get();
 
-        return view('admin.commissions', compact('commissions', 'sellers', 'products'));
+        return view('admin.discounts', compact('discounts', 'products'));
     }
 
     /**
-     * Store a new commission rule.
+     * Store a new product discount rule.
      */
-    public function storeCommission(Request $request)
+    public function storeDiscount(Request $request)
     {
         if (auth()->user()->role !== 'admin') {
             return abort(403);
         }
 
         $request->validate([
-            'seller_id' => 'required|exists:users,id',
-            'product_id' => 'required|exists:products,id',
-            'commission_amount' => 'required|integer|min:100',
+            'product_id' => 'required|exists:products,id|unique:product_discounts,product_id',
+            'discount_amount' => 'required|numeric|min:1',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'in:buyer,seller,admin',
+        ], [
+            'product_id.unique' => 'Produk ini sudah memiliki aturan diskon. Silakan edit aturan yang sudah ada.',
+            'roles.required' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
+            'roles.min' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
         ]);
 
-        // Cek apakah rule sudah ada
-        $existing = \App\Models\SellerCommission::where('seller_id', $request->seller_id)
-            ->where('product_id', $request->product_id)
-            ->first();
-
-        if ($existing) {
-            return redirect()->route('admin.commissions')
-                ->with('error', 'Aturan komisi untuk seller dan produk ini sudah ada. Silakan edit yang sudah ada.');
+        $product = Product::findOrFail($request->product_id);
+        if ($request->discount_amount > $product->price) {
+            return redirect()->route('admin.discounts')
+                ->with('error', 'Potongan diskon tidak boleh melebihi harga produk (Rp ' . number_format($product->price, 0, ',', '.') . ').')
+                ->withInput();
         }
 
-        \App\Models\SellerCommission::create([
-            'seller_id' => $request->seller_id,
+        \App\Models\ProductDiscount::create([
             'product_id' => $request->product_id,
-            'commission_amount' => $request->commission_amount,
+            'discount_amount' => $request->discount_amount,
+            'roles' => $request->roles,
             'is_active' => true,
         ]);
 
-        return redirect()->route('admin.commissions')
-            ->with('success', 'Aturan komisi berhasil ditambahkan.');
+        return redirect()->route('admin.discounts')
+            ->with('success', 'Aturan diskon berhasil ditambahkan.');
     }
 
     /**
-     * Update commission amount.
+     * Update discount amount & roles.
      */
-    public function updateCommission(Request $request, $id)
+    public function updateDiscount(Request $request, $id)
     {
         if (auth()->user()->role !== 'admin') {
             return abort(403);
         }
 
-        $commission = \App\Models\SellerCommission::findOrFail($id);
+        $discount = \App\Models\ProductDiscount::with('product')->findOrFail($id);
 
         $request->validate([
-            'commission_amount' => 'required|integer|min:100',
+            'discount_amount' => 'required|numeric|min:1',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'in:buyer,seller,admin',
+        ], [
+            'roles.required' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
+            'roles.min' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
         ]);
 
-        $commission->update([
-            'commission_amount' => $request->commission_amount,
+        if ($discount->product && $request->discount_amount > $discount->product->price) {
+            return redirect()->route('admin.discounts')
+                ->with('error', 'Potongan diskon tidak boleh melebihi harga produk (Rp ' . number_format($discount->product->price, 0, ',', '.') . ').');
+        }
+
+        $discount->update([
+            'discount_amount' => $request->discount_amount,
+            'roles' => $request->roles,
         ]);
 
-        return redirect()->route('admin.commissions')
-            ->with('success', 'Jumlah komisi berhasil diperbarui.');
+        return redirect()->route('admin.discounts')
+            ->with('success', 'Aturan diskon berhasil diperbarui.');
     }
 
     /**
-     * Delete a commission rule.
+     * Delete a discount rule.
      */
-    public function deleteCommission($id)
+    public function deleteDiscount($id)
     {
         if (auth()->user()->role !== 'admin') {
             return abort(403);
         }
 
-        $commission = \App\Models\SellerCommission::findOrFail($id);
-        $commission->delete();
+        $discount = \App\Models\ProductDiscount::findOrFail($id);
+        $discount->delete();
 
-        return redirect()->route('admin.commissions')
-            ->with('success', 'Aturan komisi berhasil dihapus.');
+        return redirect()->route('admin.discounts')
+            ->with('success', 'Aturan diskon berhasil dihapus.');
     }
 
     /**
-     * Toggle commission active/inactive.
+     * Toggle discount active/inactive.
      */
-    public function toggleCommission($id)
+    public function toggleDiscount($id)
     {
         if (auth()->user()->role !== 'admin') {
             return abort(403);
         }
 
-        $commission = \App\Models\SellerCommission::findOrFail($id);
-        $commission->update([
-            'is_active' => !$commission->is_active,
+        $discount = \App\Models\ProductDiscount::findOrFail($id);
+        $discount->update([
+            'is_active' => !$discount->is_active,
         ]);
 
-        $statusText = $commission->is_active ? 'diaktifkan' : 'dinonaktifkan';
-        return redirect()->route('admin.commissions')
-            ->with('success', "Aturan komisi berhasil {$statusText}.");
+        $statusText = $discount->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        return redirect()->route('admin.discounts')
+            ->with('success', "Aturan diskon berhasil {$statusText}.");
     }
 
     /**

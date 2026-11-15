@@ -186,8 +186,8 @@ class PaymentCallbackController extends Controller
                 $order->status = $order->is_preorder ? 'proses' : 'sukses';
                 $order->save();
 
-                // Process seller commissions
-                \App\Models\SellerCommission::processForOrder($order);
+                // Seller commissions replaced by role-based product discounts
+                // \App\Models\SellerCommission::processForOrder($order);
 
                 // Decrement product stock if not unlimited
                 if ($order->product && $order->product->stock > 0) {

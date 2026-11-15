@@ -126,12 +126,12 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/vpn-panel/{id}/delete', [AdminController::class, 'deleteVpnServer'])->name('vpn_panel.delete');
         Route::post('/vpn-panel/test-connection', [AdminController::class, 'testVpnServerConnection'])->name('vpn_panel.test');
 
-        // Kelola Komisi Seller
-        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
-        Route::post('/commissions', [AdminController::class, 'storeCommission'])->name('commissions.store');
-        Route::post('/commissions/{id}/update', [AdminController::class, 'updateCommission'])->name('commissions.update');
-        Route::post('/commissions/{id}/delete', [AdminController::class, 'deleteCommission'])->name('commissions.delete');
-        Route::post('/commissions/{id}/toggle', [AdminController::class, 'toggleCommission'])->name('commissions.toggle');
+        // Kelola Diskon Produk Berdasarkan Role
+        Route::get('/discounts', [AdminController::class, 'discounts'])->name('discounts');
+        Route::post('/discounts', [AdminController::class, 'storeDiscount'])->name('discounts.store');
+        Route::post('/discounts/{id}/update', [AdminController::class, 'updateDiscount'])->name('discounts.update');
+        Route::post('/discounts/{id}/delete', [AdminController::class, 'deleteDiscount'])->name('discounts.delete');
+        Route::post('/discounts/{id}/toggle', [AdminController::class, 'toggleDiscount'])->name('discounts.toggle');
 
 
         // Admin Tools - Cek & Reset Kuota XL

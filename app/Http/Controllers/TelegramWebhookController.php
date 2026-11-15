@@ -324,8 +324,8 @@ class TelegramWebhookController extends Controller
                     }
                 }
 
-                // Process seller commissions
-                \App\Models\SellerCommission::processForOrder($order);
+                // Seller commissions replaced by role-based product discounts
+                // \App\Models\SellerCommission::processForOrder($order);
 
                 // Run the pulsa transaction
                 if (!$order->is_preorder) {

@@ -24,7 +24,7 @@ class CatalogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query();
+        $query = Product::with(['discount', 'seller', 'stocks']);
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -125,7 +125,7 @@ class CatalogController extends Controller
         // === BALANCE PAYMENT ===
         if ($paymentMethod === 'balance') {
             $user = auth()->user();
-            $price = $product->price;
+            $price = $product->getFinalPriceForUser($user);
             $orderId = 'ORD-' . strtoupper(Str::random(8));
 
             try {
@@ -228,8 +228,8 @@ class CatalogController extends Controller
                         }
                     }
 
-                    // Process seller commissions
-                    \App\Models\SellerCommission::processForOrder($order);
+                    // Seller commissions replaced by role-based product discounts
+                    // \App\Models\SellerCommission::processForOrder($order);
 
                     return $order;
                 });
@@ -308,8 +308,9 @@ class CatalogController extends Controller
         }
 
         // Pick a random code
+        $effectivePrice = $product->getFinalPriceForUser(auth()->user());
         $uniqueCode = $availableCodes[array_rand($availableCodes)];
-        $totalAmount = $product->price + $uniqueCode;
+        $totalAmount = $effectivePrice + $uniqueCode;
 
         // Generate dynamic QRIS string
         $qrisPayload = QrisService::generateDynamicQris($staticQris, $totalAmount);
@@ -325,7 +326,7 @@ class CatalogController extends Controller
             'email_or_whatsapp' => $request->email_or_whatsapp,
             'customer_name' => $isPreorder ? $request->preorder_name : null,
             'target_phone' => $request->target_phone,
-            'base_amount' => $product->price,
+            'base_amount' => $effectivePrice,
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
             'status' => 'pending',
