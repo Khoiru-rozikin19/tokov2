@@ -168,6 +168,7 @@ class CatalogController extends Controller
                     ]);
 
                     // Create the order (paid immediately)
+                    $modalSnapshot = (int) ($product->harga_modal ?? 0);
                     $order = Order::create([
                         'id' => $orderId,
                         'user_id' => $user->id,
@@ -178,6 +179,8 @@ class CatalogController extends Controller
                         'base_amount' => $price,
                         'unique_code' => 0,
                         'total_amount' => $price,
+                        'cost_price' => $modalSnapshot,
+                        'profit' => (int) $price - $modalSnapshot,
                         'status' => $isPreorder ? 'proses' : 'sukses',
                         'is_preorder' => $isPreorder,
                         'payment_method' => 'balance',
@@ -319,6 +322,7 @@ class CatalogController extends Controller
         $orderId = 'ORD-' . strtoupper(Str::random(8));
 
         // Create the order
+        $modalSnapshot = (int) ($product->harga_modal ?? 0);
         $order = Order::create([
             'id' => $orderId,
             'user_id' => auth()->id(),
@@ -329,6 +333,8 @@ class CatalogController extends Controller
             'base_amount' => $effectivePrice,
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
+            'cost_price' => $modalSnapshot,
+            'profit' => (int) $totalAmount - $modalSnapshot,
             'status' => 'pending',
             'is_preorder' => $isPreorder,
             'payment_method' => 'qris',

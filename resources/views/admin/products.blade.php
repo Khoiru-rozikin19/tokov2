@@ -12,9 +12,9 @@
             @if(auth()->user()->role === 'admin')
             <form action="{{ route('admin.products.sync_okeconnect') }}" method="POST" class="inline">
                 @csrf
-                <button type="submit" class="flex items-center space-x-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 active:scale-95 transition-all duration-200">
+                <button type="submit" class="flex items-center space-x-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 active:scale-95 transition-all duration-200" title="Sinkronkan status Open/Close sekaligus Harga Modal produk dari OKEConnect">
                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
-                    <span>Sinkron Status Supplier</span>
+                    <span>Sinkron Status & Modal Supplier</span>
                 </button>
             </form>
             <button onclick="toggleManageCategoriesModal(true)" class="flex items-center space-x-2 px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl text-sm font-bold shadow-sm active:scale-95 transition-all duration-200">
@@ -68,7 +68,7 @@
                         @if(auth()->user()->role === 'admin')
                             <th class="py-3 px-4">Seller</th>
                         @endif
-                        <th class="py-3 px-4">Harga</th>
+                        <th class="py-3 px-4">Harga & Modal / Laba</th>
                         <th class="py-3 px-4">Masa Aktif</th>
                         <th class="py-3 px-4">Stok</th>
                         <th class="py-3 px-4">Visibilitas</th>
@@ -118,8 +118,23 @@
                                     {{ $product->seller ? $product->seller->name : 'Admin Utama' }}
                                 </td>
                             @endif
-                            <td class="py-3 px-4 text-blue-600 dark:text-blue-400 font-bold">
-                                Rp {{ number_format($product->price, 0, ',', '.') }}
+                            <td class="py-3 px-4">
+                                @php
+                                    $modalVal = (int) ($product->harga_modal ?? 0);
+                                    $sellVal = (int) $product->price;
+                                    $estProfit = $sellVal - $modalVal;
+                                @endphp
+                                <div class="text-blue-600 dark:text-blue-400 font-bold">
+                                    Rp {{ number_format($sellVal, 0, ',', '.') }}
+                                </div>
+                                @if(auth()->user()->role === 'admin')
+                                    <div class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                        Modal: <span class="font-semibold text-slate-600 dark:text-slate-300">Rp {{ number_format($modalVal, 0, ',', '.') }}</span>
+                                    </div>
+                                    <div class="text-[11px] mt-0.5 font-bold {{ $estProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                        Laba: {{ $estProfit >= 0 ? '+' : '' }}Rp {{ number_format($estProfit, 0, ',', '.') }}
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-3 px-4">
                                 {{ $product->duration_days }} Hari
@@ -222,8 +237,17 @@
 
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Harga</span>
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Harga Jual</span>
                         <span class="font-extrabold text-slate-800 dark:text-slate-100">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                        @if(auth()->user()->role === 'admin')
+                            @php
+                                $mVal = (int) ($product->harga_modal ?? 0);
+                                $sVal = (int) $product->price;
+                                $eProf = $sVal - $mVal;
+                            @endphp
+                            <span class="block text-[10px] text-slate-400 mt-0.5">Modal: Rp {{ number_format($mVal, 0, ',', '.') }}</span>
+                            <span class="block text-[10px] font-bold {{ $eProf > 0 ? 'text-emerald-600' : 'text-rose-600' }}">Laba: {{ $eProf >= 0 ? '+' : '' }}Rp {{ number_format($eProf, 0, ',', '.') }}</span>
+                        @endif
                     </div>
                     <div>
                         <span class="text-slate-400 block text-[10px] uppercase font-bold">Masa Aktif</span>
@@ -355,8 +379,15 @@
 
             @if(auth()->user()->role === 'admin')
             <div>
-                <label for="create_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (Orderkuota)</label>
-                <input type="text" id="create_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: TSEL10, ML86 (Kosongkan jika bukan produk supplier)" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <label for="create_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (OKEConnect / Orderkuota)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="create_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: IHP3, SMDC150 (Kosongkan jika bukan produk H2H)" class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <button type="button" id="btn_lookup_create" onclick="lookupOkeconnectCode('create')" class="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold whitespace-nowrap shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+                        🔍 Cek & Ambil Modal
+                    </button>
+                </div>
+                <div id="create_okeconnect_info" class="hidden mt-2 p-3 rounded-xl text-xs font-semibold"></div>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Jika kode diisi, <strong>Harga Modal</strong> akan otomatis disinkronkan mengikuti harga asli OKEConnect.</p>
             </div>
             @endif
 
@@ -495,8 +526,15 @@
 
             @if(auth()->user()->role === 'admin')
             <div>
-                <label for="edit_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (Orderkuota)</label>
-                <input type="text" id="edit_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: TSEL10, ML86" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <label for="edit_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (OKEConnect / Orderkuota)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="edit_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: IHP3, SMDC150" class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <button type="button" id="btn_lookup_edit" onclick="lookupOkeconnectCode('edit')" class="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold whitespace-nowrap shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+                        🔍 Cek & Ambil Modal
+                    </button>
+                </div>
+                <div id="edit_okeconnect_info" class="hidden mt-2 p-3 rounded-xl text-xs font-semibold"></div>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Jika kode diisi, <strong>Harga Modal</strong> akan otomatis disinkronkan mengikuti harga asli OKEConnect.</p>
             </div>
             @endif
 
@@ -719,6 +757,11 @@
         }
         if (document.getElementById('edit_orderkuota_product_code')) {
             document.getElementById('edit_orderkuota_product_code').value = product.orderkuota_product_code || '';
+        }
+        const editOkeInfo = document.getElementById('edit_okeconnect_info');
+        if (editOkeInfo) {
+            editOkeInfo.classList.add('hidden');
+            editOkeInfo.innerHTML = '';
         }
         document.getElementById('edit_description').value = product.description || '';
         document.getElementById('edit_success_instruction').value = product.success_instruction || '';
@@ -970,6 +1013,75 @@
         }
     });
 
+    function lookupOkeconnectCode(prefix) {
+        const codeInput = document.getElementById(`${prefix}_orderkuota_product_code`);
+        const modalInput = document.getElementById(`${prefix}_harga_modal`);
+        const nameInput = document.getElementById(`${prefix}_name`);
+        const infoBox = document.getElementById(`${prefix}_okeconnect_info`);
+        const btn = document.getElementById(`btn_lookup_${prefix}`);
 
+        if (!codeInput) return;
+        const code = codeInput.value.trim();
+        if (!code) {
+            alert('Masukkan Kode Produk Supplier (OKEConnect) terlebih dahulu.');
+            codeInput.focus();
+            return;
+        }
+
+        const originalText = btn ? btn.innerHTML : '🔍 Cek & Ambil Modal';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Mengecek...';
+        }
+
+        fetch(`{{ route('admin.products.lookup_okeconnect') }}?code=${encodeURIComponent(code)}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+            if (data.success) {
+                if (modalInput) {
+                    modalInput.value = data.price;
+                }
+                if (nameInput && !nameInput.value.trim() && data.description) {
+                    nameInput.value = data.description;
+                }
+                if (infoBox) {
+                    const statusBadge = data.status === 'open'
+                        ? '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">OPEN</span>'
+                        : '<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">CLOSE</span>';
+                    infoBox.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 space-y-1';
+                    infoBox.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span>✅ <strong>${escapeHtml(data.code)}</strong> ditemukan di OKEConnect</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="text-slate-600 dark:text-slate-300">${escapeHtml(data.description || '-')}</div>
+                        <div class="font-extrabold text-emerald-700 dark:text-emerald-400">Harga Modal OKEConnect: ${escapeHtml(data.formatted_price)} (Otomatis Terisi)</div>
+                    `;
+                }
+            } else {
+                if (infoBox) {
+                    infoBox.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400';
+                    infoBox.innerHTML = `⚠️ ${escapeHtml(data.message || 'Kode tidak ditemukan di OKEConnect.')}`;
+                } else {
+                    alert(data.message || 'Kode tidak ditemukan di OKEConnect.');
+                }
+            }
+        })
+        .catch(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+            alert('Gagal menghubungi server untuk mengecek kode OKEConnect.');
+        });
+    }
 </script>
 @endsection

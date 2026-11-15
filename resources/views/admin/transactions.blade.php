@@ -44,6 +44,7 @@
                         <th class="py-4.5 px-6">Harga Dasar</th>
                         <th class="py-4.5 px-6 text-center">Kode Unik</th>
                         <th class="py-4.5 px-6">Total Tagihan</th>
+                        <th class="py-4.5 px-6">Modal & Laba</th>
                         <th class="py-4.5 px-6">Status</th>
                         <th class="py-4.5 px-6">Dibuat Pada</th>
                     </tr>
@@ -69,6 +70,22 @@
                             </td>
                             <td class="py-4.5 px-6 font-extrabold text-slate-800 dark:text-slate-100">
                                 Rp {{ number_format($order->total_amount, 0, ',', '.') }}
+                            </td>
+                            <td class="py-4.5 px-6">
+                                @php
+                                    $orderCost = $order->getEffectiveCostPrice();
+                                    $orderProfit = $order->getEffectiveProfit();
+                                @endphp
+                                <div class="flex flex-col space-y-0.5 text-xs">
+                                    <span class="text-slate-500 dark:text-slate-400">Modal: Rp {{ number_format($orderCost, 0, ',', '.') }}</span>
+                                    @if(in_array($order->status, ['success', 'paid', 'sukses', 'proses']))
+                                        <span class="font-extrabold {{ $orderProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                                            Laba: {{ $orderProfit >= 0 ? '+' : '' }}Rp {{ number_format($orderProfit, 0, ',', '.') }}
+                                        </span>
+                                    @else
+                                        <span class="text-slate-400 italic text-[11px]">Est. Laba: Rp {{ number_format($orderProfit, 0, ',', '.') }}</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-4.5 px-6">
                                 @if(in_array($order->status, ['success', 'paid', 'sukses']))

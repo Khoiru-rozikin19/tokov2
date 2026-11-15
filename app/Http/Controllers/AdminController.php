@@ -35,37 +35,90 @@ class AdminController extends Controller
             return Product::where('user_id', $user->id);
         };
 
-        // 1. Wallets & Earnings (Stats matching screenshot 2)
-        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->sum('total_amount');
-        
-        // Saldo Dompet Saya (Profit/Wallet Balance) - Released or Non-escrow only
-        $walletBalance = 0;
-        
-        // Profit dari penjualan produk sendiri yang sudah dirilis atau non-escrow
-        $successfulOrders = $orderQuery()
+        // 1. Wallets & Earnings (Akurasi Omzet, Modal H2H, dan Laba Bersih)
+        $allSuccessOrders = $orderQuery()
             ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
-            ->whereIn('escrow_status', ['released', 'none'])
             ->with('product')
             ->get();
-        foreach ($successfulOrders as $order) {
-            $product = $order->product;
-            $modal = $product ? ($product->harga_modal ?? 0) : 0;
-            $walletBalance += ($order->total_amount - $modal);
+
+        $totalRevenue = 0;
+        $totalCost = 0;
+        $releasedProfit = 0;
+
+        $todayStr = Carbon::now()->format('Y-m-d');
+        $monthPrefix = Carbon::now()->format('Y-m');
+
+        $todayRevenue = 0;
+        $todayCost = 0;
+        $todayProfit = 0;
+        $todaySalesCount = 0;
+
+        $monthRevenue = 0;
+        $monthCost = 0;
+        $monthProfit = 0;
+        $monthSalesCount = 0;
+
+        $qrisRevenue = 0;
+        $qrisProfit = 0;
+        $qrisCount = 0;
+
+        $balanceRevenue = 0;
+        $balanceProfit = 0;
+        $balanceCount = 0;
+
+        foreach ($allSuccessOrders as $order) {
+            $rev = (int) $order->total_amount;
+            $cost = $order->getEffectiveCostPrice();
+            $prof = $order->getEffectiveProfit();
+
+            $totalRevenue += $rev;
+            $totalCost += $cost;
+
+            if (in_array($order->escrow_status, ['released', 'none', null, ''], true)) {
+                $releasedProfit += $prof;
+            }
+
+            $orderDateStr = $order->created_at ? $order->created_at->format('Y-m-d') : '';
+            if ($orderDateStr === $todayStr) {
+                $todayRevenue += $rev;
+                $todayCost += $cost;
+                $todayProfit += $prof;
+                $todaySalesCount++;
+            }
+
+            if ($orderDateStr !== '' && str_starts_with($orderDateStr, $monthPrefix)) {
+                $monthRevenue += $rev;
+                $monthCost += $cost;
+                $monthProfit += $prof;
+                $monthSalesCount++;
+            }
+
+            if ($order->payment_method === 'balance') {
+                $balanceRevenue += $rev;
+                $balanceProfit += $prof;
+                $balanceCount++;
+            } else {
+                $qrisRevenue += $rev;
+                $qrisProfit += $prof;
+                $qrisCount++;
+            }
         }
- 
-        // Tambah komisi/cashback yang didapatkan dari pembelian produk
-        $totalCommissions = Order::where('user_id', $user->id)
+
+        // Tambah komisi/cashback lama (jika ada)
+        $totalCommissions = (int) Order::where('user_id', $user->id)
             ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
             ->sum('commission_earned');
-        $walletBalance += $totalCommissions;
+
+        $totalNetProfit = ($totalRevenue - $totalCost) + $totalCommissions;
 
         // Deduct seller transfers to their user balance
-        $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
+        $totalTransferred = (int) \App\Models\BalanceTransaction::where('user_id', $user->id)
             ->where('type', 'transfer_in')
             ->where('status', 'success')
             ->where('description', 'like', '%Transfer dari Dompet Seller%')
             ->sum('amount');
-        $walletBalance -= $totalTransferred;
+
+        $walletBalance = $releasedProfit + $totalCommissions - $totalTransferred;
 
         // Saldo Tertahan (Held or Disputed)
         $heldBalance = $orderQuery()
@@ -78,7 +131,7 @@ class AdminController extends Controller
             $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->getSaldoOrderkuota();
         }
 
-        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->count();
+        $totalSalesCount = $allSuccessOrders->count();
         $totalOrdersCount = $orderQuery()->count();
 
         $readyStockCount = 0;
@@ -86,21 +139,29 @@ class AdminController extends Controller
             $readyStockCount += $p->stock;
         }
 
-        // 2. Trend Pendapatan Harian (Last 7 Days)
+        // 2. Trend Pendapatan & Keuntungan Harian (Last 7 Days)
         $chartLabels = [];
         $chartData = [];
+        $chartProfitData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
+            $dateKey = $date->format('Y-m-d');
             $chartLabels[] = $date->isoFormat('D MMM');
-            
-            $revenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
-                ->whereDate('created_at', $date->format('Y-m-d'))
-                ->sum('total_amount');
-            $chartData[] = $revenue;
+
+            $dayRev = 0;
+            $dayProf = 0;
+            foreach ($allSuccessOrders as $ord) {
+                if ($ord->created_at && $ord->created_at->format('Y-m-d') === $dateKey) {
+                    $dayRev += (int) $ord->total_amount;
+                    $dayProf += $ord->getEffectiveProfit();
+                }
+            }
+            $chartData[] = $dayRev;
+            $chartProfitData[] = $dayProf;
         }
 
         // 3. Rasio Status Order (Donut Chart)
-        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->count();
+        $statusSuccess = $totalSalesCount;
         $statusPending = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])->count();
         $statusExpired = $orderQuery()->where('status', 'expired')->count();
 
@@ -109,14 +170,32 @@ class AdminController extends Controller
 
         return view('admin.dashboard', compact(
             'totalRevenue',
+            'totalCost',
+            'totalNetProfit',
+            'totalTransferred',
             'walletBalance',
             'heldBalance',
             'orderkuotaBalance',
             'totalSalesCount',
             'totalOrdersCount',
             'readyStockCount',
+            'todayRevenue',
+            'todayCost',
+            'todayProfit',
+            'todaySalesCount',
+            'monthRevenue',
+            'monthCost',
+            'monthProfit',
+            'monthSalesCount',
+            'qrisRevenue',
+            'qrisProfit',
+            'qrisCount',
+            'balanceRevenue',
+            'balanceProfit',
+            'balanceCount',
             'chartLabels',
             'chartData',
+            'chartProfitData',
             'donutLabels',
             'donutData'
         ));
@@ -175,9 +254,7 @@ class AdminController extends Controller
                     ->with('product')
                     ->get();
                 foreach ($successfulOrders as $order) {
-                    $product = $order->product;
-                    $modal = $product ? ($product->harga_modal ?? 0) : 0;
-                    $walletBalance += ($order->total_amount - $modal);
+                    $walletBalance += $order->getEffectiveProfit();
                 }
 
                 // Tambah komisi/cashback yang didapatkan dari pembelian produk
@@ -239,6 +316,17 @@ class AdminController extends Controller
     }
 
     /**
+     * AJAX Lookup single product code from OKEConnect.
+     */
+    public function lookupOkeconnectProduct(Request $request)
+    {
+        $code = (string) $request->query('code', '');
+        $result = app(\App\Services\OrderkuotaService::class)->lookupProductByCode($code);
+
+        return response()->json($result);
+    }
+
+    /**
      * Store new product.
      */
     public function storeProduct(Request $request)
@@ -262,10 +350,24 @@ class AdminController extends Controller
             'visibility' => 'nullable|in:all,admin_seller,admin_only',
         ]);
 
-        DB::transaction(function () use ($request) {
+        // Jika kode produk OKEConnect diisi, sinkronkan otomatis harga_modal & status dari OKEConnect
+        $syncedFromOke = null;
+        if ($request->filled('orderkuota_product_code') && !app()->runningUnitTests()) {
+            $lookup = app(\App\Services\OrderkuotaService::class)->lookupProductByCode($request->orderkuota_product_code);
+            if (!empty($lookup['success']) && !empty($lookup['price'])) {
+                $syncedFromOke = $lookup;
+            }
+        }
+
+        DB::transaction(function () use ($request, $syncedFromOke) {
             $data = $request->all();
             if (auth()->user()->role !== 'admin' || empty($data['user_id'])) {
                 $data['user_id'] = auth()->id();
+            }
+
+            if ($syncedFromOke) {
+                $data['harga_modal'] = (int) $syncedFromOke['price'];
+                $data['status'] = $syncedFromOke['status'];
             }
 
             // Restrict VPS automation settings to admin users only
@@ -302,7 +404,12 @@ class AdminController extends Controller
             }
         });
 
-        return redirect()->route('admin.products')->with('success', 'Produk berhasil ditambahkan.');
+        $msg = 'Produk berhasil ditambahkan.';
+        if ($syncedFromOke) {
+            $msg .= ' Harga modal otomatis disinkronkan dari OKEConnect (' . $syncedFromOke['formatted_price'] . ').';
+        }
+
+        return redirect()->route('admin.products')->with('success', $msg);
     }
 
     /**
@@ -336,13 +443,27 @@ class AdminController extends Controller
             'visibility' => 'nullable|in:all,admin_seller,admin_only',
         ]);
 
-        DB::transaction(function () use ($product, $request) {
+        // Jika kode produk OKEConnect diisi, sinkronkan otomatis harga_modal & status dari OKEConnect
+        $syncedFromOke = null;
+        if ($request->filled('orderkuota_product_code') && !app()->runningUnitTests()) {
+            $lookup = app(\App\Services\OrderkuotaService::class)->lookupProductByCode($request->orderkuota_product_code);
+            if (!empty($lookup['success']) && !empty($lookup['price'])) {
+                $syncedFromOke = $lookup;
+            }
+        }
+
+        DB::transaction(function () use ($product, $request, $syncedFromOke) {
             $data = $request->all();
             if (auth()->user()->role !== 'admin') {
                 unset($data['user_id']); // Seller cannot change the owner
                 // Restrict VPS automation settings to admin users only (preserve existing config in DB by unsetting)
                 unset($data['vps_server_id']);
                 unset($data['vps_command_template']);
+            }
+
+            if ($syncedFromOke) {
+                $data['harga_modal'] = (int) $syncedFromOke['price'];
+                $data['status'] = $syncedFromOke['status'];
             }
 
             // Handle image upload
@@ -379,9 +500,30 @@ class AdminController extends Controller
             }
 
             $product->update($data);
+
+            // Backfill transaksi historis produk ini jika cost_price sebelumnya kosong/0
+            $effectiveModal = (int) ($product->harga_modal ?? 0);
+            if ($effectiveModal > 0) {
+                $unfilledOrders = Order::where('product_id', $product->id)
+                    ->where(function ($q) {
+                        $q->whereNull('cost_price')->orWhere('cost_price', '<=', 0);
+                    })
+                    ->get();
+                foreach ($unfilledOrders as $ord) {
+                    $ord->update([
+                        'cost_price' => $effectiveModal,
+                        'profit' => (int) $ord->total_amount - $effectiveModal,
+                    ]);
+                }
+            }
         });
 
-        return redirect()->route('admin.products')->with('success', 'Produk berhasil diperbarui.');
+        $msg = 'Produk berhasil diperbarui.';
+        if ($syncedFromOke) {
+            $msg .= ' Harga modal otomatis disinkronkan dari OKEConnect (' . $syncedFromOke['formatted_price'] . ').';
+        }
+
+        return redirect()->route('admin.products')->with('success', $msg);
     }
 
     /**

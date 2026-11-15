@@ -22,6 +22,8 @@ class Order extends Model
         'base_amount',
         'unique_code',
         'total_amount',
+        'cost_price',
+        'profit',
         'status',
         'is_preorder',
         'payment_method',
@@ -65,16 +67,45 @@ class Order extends Model
         return in_array($this->status, ['pending', 'pending_manual']) && $this->expired_at && $this->expired_at->isPast();
     }
 
+    /**
+     * Get the effective modal/cost price for this order (snapshot first, fallback to product modal).
+     */
+    public function getEffectiveCostPrice(): int
+    {
+        if ($this->cost_price !== null && (int) $this->cost_price > 0) {
+            return (int) $this->cost_price;
+        }
+        return (int) ($this->product ? ($this->product->harga_modal ?? 0) : 0);
+    }
+
+    /**
+     * Get the effective net profit for this order.
+     */
+    public function getEffectiveProfit(): int
+    {
+        if ($this->profit !== null && $this->cost_price !== null && (int) $this->cost_price > 0) {
+            return (int) $this->profit;
+        }
+        return (int) $this->total_amount - $this->getEffectiveCostPrice();
+    }
+
     public function processEscrowAndNotification()
     {
         $this->paid_at = now();
         $product = $this->product;
         $seller = $product ? $product->seller : null;
+
+        // Snapshot harga modal dan keuntungan pada saat pembayaran berhasil
+        $modal = ($this->cost_price !== null && (int) $this->cost_price > 0)
+            ? (int) $this->cost_price
+            : (int) ($product ? ($product->harga_modal ?? 0) : 0);
+        $this->cost_price = $modal;
+        $this->profit = (int) $this->total_amount - $modal;
         
         // Produk milik admin (bukan seller) → tidak perlu escrow dan notifikasi seller
         if ($product && $product->user_id && $seller && $seller->role !== 'admin') {
             // Seller product
-            $escrowAmount = $this->total_amount - ($product->harga_modal ?? 0);
+            $escrowAmount = $this->profit;
             $this->escrow_status = 'held';
             $this->escrow_amount = $escrowAmount;
             $this->save();

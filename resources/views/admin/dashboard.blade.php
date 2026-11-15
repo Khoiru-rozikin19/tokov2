@@ -27,15 +27,15 @@
         </p>
     </div>
 
-    <!-- Top Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ auth()->user()->role === 'admin' ? '5' : '4' }} gap-6">
+    <!-- Top Cards Grid (Ringkasan Utama Kas, Omzet, Modal H2H, & Keuntungan Bersih) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         @if(auth()->user()->role === 'admin')
-            <!-- Card 1: Saldo orderkuota (Deep Blue) -->
+            <!-- Card 1: Saldo Orderkuota (Deep Blue) -->
             <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
                 <div>
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo orderkuota</span>
+                        <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo Orderkuota (H2H)</span>
                         <button id="refreshOrderkuotaBtn" class="text-blue-200 hover:text-white transition-colors duration-150 focus:outline-none" title="Refresh Saldo Real-time">
                             <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
@@ -51,98 +51,180 @@
                     </span>
                 </div>
                 <div class="flex items-center justify-between mt-4">
-                    <span class="text-xs text-blue-100">H2H Supplier</span>
-                </div>
-            </div>
-
-            <!-- Card 2: Saldo dompet saya (Orange/Yellow) -->
-            <div class="bg-amber-500 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-500/10 min-h-44">
-                <div>
-                    <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider block">Saldo dompet saya</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($walletBalance, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex items-center justify-between mt-4">
-                    <span class="text-xs text-amber-100">Bersih (Setelah modal H2H)</span>
-                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
-                        <span>Pindahkan Saldo</span>
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Card 3: Saldo tertahan Admin (Slate Gray) -->
-            <div class="bg-slate-700 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-slate-700/10 min-h-44">
-                <div>
-                    <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider block">Saldo tertahan</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($heldBalance, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex items-center justify-between mt-4">
-                    <span class="text-xs text-slate-200">Masa garansi 90 menit</span>
-                </div>
-            </div>
-        @else
-            <!-- Card 1: Saldo dompet saya for Seller (Deep Blue) -->
-            <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
-                <div>
-                    <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo dompet saya</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($walletBalance, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex items-center justify-between mt-4">
-                    <span class="text-xs text-blue-100">Komisi: 0%</span>
-                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
-                        <span>Pindahkan Saldo</span>
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Card 2: Saldo tertahan Seller (Indigo) -->
-            <div class="bg-indigo-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-indigo-600/10 min-h-44">
-                <div>
-                    <span class="text-xs font-semibold text-indigo-200 uppercase tracking-wider block">Saldo tertahan</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($heldBalance, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex items-center justify-between mt-4">
-                    <span class="text-xs text-indigo-100">Masa garansi 90 menit</span>
+                    <span class="text-xs text-blue-100">Sisa Amunisi Modal di Supplier</span>
                 </div>
             </div>
         @endif
 
-        <!-- Card 3: Pendapatan Kotor (White / Green Text) -->
+        <!-- Card 2: Total Keuntungan Bersih (Emerald Green) -->
+        <div class="bg-emerald-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-emerald-600/10 min-h-44">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-emerald-100 uppercase tracking-wider block">Total Keuntungan Bersih</span>
+                    <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                        {{ $totalRevenue > 0 ? round(($totalNetProfit / $totalRevenue) * 100, 1) : 0 }}% Margin
+                    </span>
+                </div>
+                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($totalNetProfit ?? 0, 0, ',', '.') }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-4 text-xs text-emerald-100">
+                <span>Omzet dikurangi Modal H2H ({{ $totalSalesCount }} transaksi)</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Saldo Dompet Saya / Siap Pindah (Amber/Orange) -->
+        <div class="bg-amber-500 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-500/10 min-h-44">
+            <div>
+                <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider block">Saldo Dompet Saya (Siap Tarik)</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($walletBalance, 0, ',', '.') }}</span>
+                @if(($totalTransferred ?? 0) > 0)
+                    <span class="text-[11px] text-amber-100/90 mt-1 block">Sudah dipindahkan: Rp {{ number_format($totalTransferred, 0, ',', '.') }}</span>
+                @endif
+            </div>
+            <div class="flex items-center justify-between mt-4">
+                <span class="text-xs text-amber-100">Laba bersih siap dipindah</span>
+                <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
+                    <span>Pindahkan Saldo</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 4: Omzet / Pendapatan Kotor (White) -->
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">
             <div>
-                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Pendapatan Kotor</span>
-                <span class="text-2xl font-black mt-2 block tracking-tight text-emerald-600 dark:text-emerald-400">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
+                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Omzet (Pendapatan Kotor)</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight text-blue-600 dark:text-blue-400">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
             </div>
             <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-4 leading-normal">
                 <span class="flex items-center space-x-1">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>Akumulasi pendapatan kotor produk Anda.</span>
+                    <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Total pembayaran masuk dari pembeli.</span>
                 </span>
             </div>
         </div>
 
-        <!-- Card 4: Status Stok Penjualan (White / Multi Text) -->
+        <!-- Card 5: Modal H2H Terpakai / COGS (White) -->
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">
             <div>
-                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Status Stok Penjualan</span>
+                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Total Modal H2H Terpakai</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight text-rose-600 dark:text-rose-400">Rp {{ number_format($totalCost ?? 0, 0, ',', '.') }}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-4 leading-normal">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                    <span>Akumulasi saldo H2H terpotong untuk produk terjual.</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Card 6: Status Stok & Escrow (White) -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Status Stok & Garansi</span>
+                    <span class="text-[11px] font-bold text-slate-500">Tertahan: Rp {{ number_format($heldBalance, 0, ',', '.') }}</span>
+                </div>
                 <div class="grid grid-cols-3 gap-2 mt-4 text-center">
-                    <div class="bg-blue-50 dark:bg-blue-950/20 py-2 rounded-xl border border-blue-100/50 dark:border-blue-950/50">
+                    <div class="bg-blue-50 dark:bg-blue-950/20 py-2.5 rounded-xl border border-blue-100/50 dark:border-blue-950/50">
                         <span class="text-sm font-extrabold text-blue-600 dark:text-blue-400 block">{{ $readyStockCount }}</span>
                         <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Ready</span>
                     </div>
-                    <div class="bg-amber-50 dark:bg-amber-950/20 py-2 rounded-xl border border-amber-100/50 dark:border-amber-950/50">
+                    <div class="bg-amber-50 dark:bg-amber-950/20 py-2.5 rounded-xl border border-amber-100/50 dark:border-amber-950/50">
                         <span class="text-sm font-extrabold text-amber-600 dark:text-amber-400 block">0</span>
                         <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Karantina</span>
                     </div>
-                    <div class="bg-slate-50 dark:bg-slate-900 py-2 rounded-xl border border-slate-150 dark:border-slate-800/80">
-                        <span class="text-sm font-extrabold text-slate-600 dark:text-slate-400 block">{{ $totalSalesCount }}</span>
+                    <div class="bg-emerald-50 dark:bg-emerald-950/20 py-2.5 rounded-xl border border-emerald-100/50 dark:border-emerald-950/50">
+                        <span class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 block">{{ $totalSalesCount }}</span>
                         <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Terjual</span>
                     </div>
                 </div>
             </div>
         </div>
 
+    </div>
+
+    <!-- Period & Payment Breakdown (Hari Ini, Bulan Ini, & Metode Pembayaran) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Ringkasan Hari Ini -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Performa Hari Ini</span>
+                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-slate-100">{{ now()->translatedFormat('d F Y') }}</h4>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                    {{ $todaySalesCount ?? 0 }} Trx
+                </span>
+            </div>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Omzet Kotor:</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Rp {{ number_format($todayRevenue ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Modal H2H Terpakai:</span>
+                    <span class="font-bold text-rose-600 dark:text-rose-400">- Rp {{ number_format($todayCost ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-sm">
+                    <span class="font-bold text-slate-700 dark:text-slate-200">Laba Bersih Hari Ini:</span>
+                    <span class="font-black text-emerald-600 dark:text-emerald-400">+Rp {{ number_format($todayProfit ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ringkasan Bulan Ini -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">Performa Bulan Ini</span>
+                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-slate-100">{{ now()->translatedFormat('F Y') }}</h4>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+                    {{ $monthSalesCount ?? 0 }} Trx
+                </span>
+            </div>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Omzet Kotor:</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">Rp {{ number_format($monthRevenue ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span>Modal H2H Terpakai:</span>
+                    <span class="font-bold text-rose-600 dark:text-rose-400">- Rp {{ number_format($monthCost ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-sm">
+                    <span class="font-bold text-slate-700 dark:text-slate-200">Laba Bersih Bulan Ini:</span>
+                    <span class="font-black text-emerald-600 dark:text-emerald-400">+Rp {{ number_format($monthProfit ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rincian Sumber Pembayaran -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Sumber Pembayaran</span>
+                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-slate-100">QRIS vs Saldo Akun</h4>
+                </div>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-700 dark:text-slate-200 block">📱 QRIS Langsung ({{ $qrisCount ?? 0 }}x)</span>
+                        <span class="text-[11px] text-slate-400">Omzet: Rp {{ number_format($qrisRevenue ?? 0, 0, ',', '.') }}</span>
+                    </div>
+                    <span class="font-extrabold text-emerald-600 dark:text-emerald-400">+Rp {{ number_format($qrisProfit ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-700 dark:text-slate-200 block">💳 Saldo Akun ({{ $balanceCount ?? 0 }}x)</span>
+                        <span class="text-[11px] text-slate-400">Omzet: Rp {{ number_format($balanceRevenue ?? 0, 0, ',', '.') }}</span>
+                    </div>
+                    <span class="font-extrabold text-emerald-600 dark:text-emerald-400">+Rp {{ number_format($balanceProfit ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Charts Section (2 Columns: 70% and 30%) -->
@@ -154,9 +236,9 @@
                 <div>
                     <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
                         <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                        <span>Tren Pendapatan Harian</span>
+                        <span>Tren Omzet & Keuntungan Bersih Harian</span>
                     </h3>
-                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Statistik omset penjualan dalam 7 hari terakhir</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Perbandingan omzet kotor vs laba bersih dalam 7 hari terakhir</p>
                 </div>
                 
                 <span class="text-xs font-semibold px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full">7 Hari Terakhir</span>
@@ -221,23 +303,44 @@
             type: 'line',
             data: {
                 labels: {!! json_encode($chartLabels) !!},
-                datasets: [{
-                    label: 'Pendapatan (Rp)',
-                    data: {!! json_encode($chartData) !!},
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                    borderWidth: 3.5,
-                    fill: true,
-                    tension: 0.35,
-                    pointBackgroundColor: '#2563eb',
-                    pointHoverRadius: 7
-                }]
+                datasets: [
+                    {
+                        label: 'Omzet Kotor (Rp)',
+                        data: {!! json_encode($chartData) !!},
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#2563eb',
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Laba Bersih (Rp)',
+                        data: {!! json_encode($chartProfitData ?? []) !!},
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#10b981',
+                        pointHoverRadius: 6
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: textColor,
+                            usePointStyle: true,
+                            font: { family: 'Plus Jakarta Sans', size: 11, weight: 'bold' }
+                        }
+                    }
                 },
                 scales: {
                     y: {

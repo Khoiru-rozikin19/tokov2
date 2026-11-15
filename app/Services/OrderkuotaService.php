@@ -274,27 +274,35 @@ class OrderkuotaService
                 ]
             ]);
 
-            $statuses = [];
+            $supplierItems = [];
 
-            // 1. Utamakan halaman tabel HTML (/harga/list) karena menampilkan status real-time yang akurat (open/close).
-            //    Gunakan preg_match_all secara langsung agar tidak memakan RAM VPS (menghindari explode jutaan karakter).
+            // 1. Utamakan halaman tabel HTML (/harga/list) karena menampilkan status & harga real-time yang akurat.
+            //    Gunakan pola kode terarah per chunk (hemat memori drastis & sangat cepat).
             $html = @file_get_contents($htmlUrl, false, $context);
             if (!empty($html)) {
-                if (preg_match_all('/<tr[^>]*>\s*<td[^>]*>\s*([A-Za-z0-9._-]+)\s*<\/td>.*?<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*<\/tr>/is', $html, $matches, PREG_SET_ORDER)) {
-                    foreach ($matches as $m) {
-                        $codeKey = strtoupper(trim($m[1]));
-                        // Hanya simpan jika kode tersebut termasuk dalam produk toko kita
-                        if (isset($targetCodes[$codeKey])) {
-                            $rawStatus = strtolower(trim($m[2]));
-                            $statuses[$codeKey] = ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close';
+                $escapedCodes = array_map(fn($c) => preg_quote($c, '/'), array_keys($targetCodes));
+                $chunks = array_chunk($escapedCodes, 100);
+                foreach ($chunks as $chunk) {
+                    $codePattern = implode('|', $chunk);
+                    if (preg_match_all('/<tr[^>]*>\s*<td[^>]*>\s*(' . $codePattern . ')\s*<\/td>.*?<td[^>]*>\s*(?:Rp\s*)?([0-9.,]+)\s*<\/td>\s*<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*<\/tr>/is', $html, $matches, PREG_SET_ORDER)) {
+                        foreach ($matches as $m) {
+                            $codeKey = strtoupper(trim($m[1]));
+                            if (isset($targetCodes[$codeKey])) {
+                                $rawPrice = (int) preg_replace('/[^0-9]/', '', $m[2]);
+                                $rawStatus = strtolower(trim($m[3]));
+                                $supplierItems[$codeKey] = [
+                                    'status' => ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close',
+                                    'price' => $rawPrice > 0 ? $rawPrice : null,
+                                ];
+                            }
                         }
                     }
                 }
                 unset($html);
             }
 
-            // 2. Fallback ke endpoint JSON jika halaman HTML gagal diunduh atau kosong
-            if (empty($statuses)) {
+            // 2. Fallback ke endpoint JSON jika halaman HTML gagal diunduh atau sebagian kode belum ditemukan
+            if (empty($supplierItems) || count($supplierItems) < count($targetCodes)) {
                 $jsonBody = @file_get_contents($jsonUrl, false, $context);
                 if (!empty($jsonBody)) {
                     $decoded = json_decode($jsonBody, true);
@@ -303,7 +311,15 @@ class OrderkuotaService
                             $code = isset($item['kode']) ? strtoupper(trim((string) $item['kode'])) : '';
                             if ($code !== '' && isset($targetCodes[$code])) {
                                 $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
-                                $statuses[$code] = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
+                                $rawPrice = isset($item['harga']) ? (int) preg_replace('/[^0-9]/', '', (string) $item['harga']) : 0;
+                                if (!isset($supplierItems[$code])) {
+                                    $supplierItems[$code] = [
+                                        'status' => ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close',
+                                        'price' => $rawPrice > 0 ? $rawPrice : null,
+                                    ];
+                                } elseif ($supplierItems[$code]['price'] === null && $rawPrice > 0) {
+                                    $supplierItems[$code]['price'] = $rawPrice;
+                                }
                             }
                         }
                     }
@@ -311,7 +327,7 @@ class OrderkuotaService
                 }
             }
 
-            if (empty($statuses)) {
+            if (empty($supplierItems)) {
                 Log::warning("OrderkuotaService: Tidak ada data produk yang berhasil di-parsing dari {$htmlUrl} maupun {$jsonUrl}.");
                 return [
                     'success' => false,
@@ -319,30 +335,73 @@ class OrderkuotaService
                 ];
             }
 
-            $updatedCount = 0;
+            $updatedStatusCount = 0;
+            $updatedPriceCount = 0;
             $changedProducts = [];
 
             foreach ($products as $product) {
                 $code = strtoupper(trim($product->orderkuota_product_code));
-                if (isset($statuses[$code])) {
-                    $supplierStatus = $statuses[$code];
+                if (isset($supplierItems[$code])) {
+                    $supplierData = $supplierItems[$code];
                     $oldStatus = strtolower(trim((string) ($product->status ?: 'close')));
-                    $newStatus = strtolower(trim((string) $supplierStatus));
+                    $newStatus = strtolower(trim((string) $supplierData['status']));
+                    $oldModal = (int) ($product->harga_modal ?? 0);
+                    $newModal = $supplierData['price'];
+
+                    $updates = [];
+                    $statusChanged = false;
+                    $priceChanged = false;
 
                     if ($oldStatus !== $newStatus) {
-                        $product->update(['status' => $newStatus]);
-                        $updatedCount++;
+                        $updates['status'] = $newStatus;
+                        $updatedStatusCount++;
+                        $statusChanged = true;
+                    }
+
+                    if ($newModal !== null && $newModal > 0 && $oldModal !== $newModal) {
+                        $updates['harga_modal'] = $newModal;
+                        $updatedPriceCount++;
+                        $priceChanged = true;
+                    }
+
+                    if (!empty($updates)) {
+                        $product->update($updates);
+                    }
+
+                    // Pastikan transaksi historis produk ini yang belum memiliki snapshot cost_price diisi dengan modal OKEConnect yang valid
+                    $effectiveModal = ($newModal !== null && $newModal > 0) ? $newModal : $oldModal;
+                    if ($effectiveModal > 0) {
+                        $unfilledOrders = Order::where('product_id', $product->id)
+                            ->where(function ($q) {
+                                $q->whereNull('cost_price')->orWhere('cost_price', '<=', 0);
+                            })
+                            ->get();
+
+                        foreach ($unfilledOrders as $ord) {
+                            $ord->update([
+                                'cost_price' => $effectiveModal,
+                                'profit' => (int) $ord->total_amount - $effectiveModal,
+                            ]);
+                        }
+                    }
+
+                    if ($statusChanged || $priceChanged) {
                         $changedProducts[] = [
                             'name' => $product->name,
                             'code' => $code,
                             'old_status' => $oldStatus,
                             'new_status' => $newStatus,
+                            'status_changed' => $statusChanged,
+                            'old_modal' => $oldModal,
+                            'new_modal' => $effectiveModal,
+                            'price_changed' => $priceChanged,
+                            'selling_price' => (int) $product->price,
                         ];
                     }
                 }
             }
 
-            // Kirim notifikasi WhatsApp ke nomor admin jika ada perubahan status produk (dengan proteksi anti-spam)
+            // Kirim notifikasi WhatsApp ke nomor admin jika ada perubahan status atau modal produk (dengan proteksi anti-spam)
             if (!empty($changedProducts)) {
                 $cacheKey = 'notif_admin_status_' . md5(json_encode($changedProducts));
                 if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
@@ -354,13 +413,16 @@ class OrderkuotaService
             // Process any pending pre-orders that are now open
             $this->processAllOpenPreorders();
 
-            Log::info("OrderkuotaService: Sinkronisasi selesai. Memperbarui {$updatedCount} produk.");
+            $totalUpdated = $updatedStatusCount + $updatedPriceCount;
+            Log::info("OrderkuotaService: Sinkronisasi selesai. Status: {$updatedStatusCount}, Harga Modal: {$updatedPriceCount}.");
 
             return [
                 'success' => true,
-                'message' => "Sinkronisasi berhasil. Memproses " . count($statuses) . " kode dari OKEConnect, memperbarui {$updatedCount} status produk.",
-                'total_parsed' => count($statuses),
-                'updated' => $updatedCount
+                'message' => "Sinkronisasi OKEConnect berhasil! Memproses " . count($supplierItems) . " produk (Update Status: {$updatedStatusCount}, Update Harga Modal: {$updatedPriceCount}).",
+                'total_parsed' => count($supplierItems),
+                'updated' => $totalUpdated,
+                'updated_status' => $updatedStatusCount,
+                'updated_price' => $updatedPriceCount,
             ];
 
         } catch (\Throwable $e) {
@@ -452,7 +514,8 @@ class OrderkuotaService
         foreach ($products as $product) {
             $code = strtoupper(trim($product->orderkuota_product_code));
             $statusIcon = strtolower($product->status) === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
-            $lines[] = "• *{$product->name}* ({$code})\n  Status: {$statusIcon}";
+            $modalFmt = 'Rp ' . number_format((int) ($product->harga_modal ?? 0), 0, ',', '.');
+            $lines[] = "• *{$product->name}* ({$code})\n  Modal: {$modalFmt} | Status: {$statusIcon}";
         }
 
         $listText = implode("\n\n", $lines);
@@ -480,7 +543,103 @@ class OrderkuotaService
     }
 
     /**
-     * Send WhatsApp notification to Admin when products change status (Open <-> Close).
+     * Lookup a single product code from OKEConnect price list (returns price, status, and description).
+     */
+    public function lookupProductByCode(string $code): array
+    {
+        $cleanCode = strtoupper(trim($code));
+        if ($cleanCode === '') {
+            return [
+                'success' => false,
+                'message' => 'Kode produk OKEConnect tidak boleh kosong.',
+            ];
+        }
+
+        $rawPriceListId = trim((string) (Setting::get('orderkuota_price_list_id') ?: '905ccd028329b0a'));
+        if (preg_match('/[?&]id=([a-zA-Z0-9_-]+)/', $rawPriceListId, $idMatches)) {
+            $priceListId = $idMatches[1];
+        } else {
+            $priceListId = $rawPriceListId;
+        }
+
+        $jsonUrl = "https://okeconnect.com/harga/json?id=" . urlencode($priceListId);
+        $htmlUrl = "https://okeconnect.com/harga/list?id=" . urlencode($priceListId);
+
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 12,
+                    'ignore_errors' => true,
+                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+                ]
+            ]);
+
+            $escaped = preg_quote($cleanCode, '/');
+
+            // 1. Cari di halaman tabel HTML (/harga/list)
+            $html = @file_get_contents($htmlUrl, false, $context);
+            if (!empty($html)) {
+                if (preg_match('/<tr[^>]*>\s*<td[^>]*>\s*(' . $escaped . ')\s*<\/td>\s*<td[^>]*>(.*?)<\/td>\s*<td[^>]*>\s*(?:Rp\s*)?([0-9.,]+)\s*<\/td>\s*<td[^>]*>\s*(?:<font[^>]*>)?\s*(open|close|gangguan|aktif|nonaktif|1|0)\s*(?:<\/font>)?\s*<\/td>\s*<\/tr>/is', $html, $m)) {
+                    $desc = trim(preg_replace('/\s+/', ' ', strip_tags($m[2])));
+                    $price = (int) preg_replace('/[^0-9]/', '', $m[3]);
+                    $rawStatus = strtolower(trim($m[4]));
+                    $status = ($rawStatus === 'open' || $rawStatus === 'aktif' || $rawStatus === '1') ? 'open' : 'close';
+                    unset($html);
+
+                    return [
+                        'success' => true,
+                        'code' => $cleanCode,
+                        'description' => $desc,
+                        'price' => $price,
+                        'formatted_price' => 'Rp ' . number_format($price, 0, ',', '.'),
+                        'status' => $status,
+                    ];
+                }
+                unset($html);
+            }
+
+            // 2. Fallback ke JSON (/harga/json)
+            $jsonBody = @file_get_contents($jsonUrl, false, $context);
+            if (!empty($jsonBody)) {
+                $decoded = json_decode($jsonBody, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $item) {
+                        $itemCode = isset($item['kode']) ? strtoupper(trim((string) $item['kode'])) : '';
+                        if ($itemCode === $cleanCode) {
+                            $price = isset($item['harga']) ? (int) preg_replace('/[^0-9]/', '', (string) $item['harga']) : 0;
+                            $rawStatus = strtolower(trim((string) ($item['status'] ?? '')));
+                            $status = ($rawStatus === '1' || $rawStatus === 'open' || $rawStatus === 'aktif') ? 'open' : 'close';
+                            $desc = trim((string) ($item['keterangan'] ?? $item['produk'] ?? ''));
+                            unset($decoded, $jsonBody);
+
+                            return [
+                                'success' => true,
+                                'code' => $cleanCode,
+                                'description' => $desc,
+                                'price' => $price,
+                                'formatted_price' => 'Rp ' . number_format($price, 0, ',', '.'),
+                                'status' => $status,
+                            ];
+                        }
+                    }
+                }
+                unset($decoded, $jsonBody);
+            }
+
+            return [
+                'success' => false,
+                'message' => "Kode produk '{$cleanCode}' tidak ditemukan pada daftar harga OKEConnect.",
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Gagal menghubungi OKEConnect: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Send WhatsApp notification to Admin when products change status or modal price.
      */
     protected function notifyAdminProductStatusChanges(array $changes): void
     {
@@ -495,21 +654,35 @@ class OrderkuotaService
             $date = date('d-m-Y H:i:s');
             $lines = [];
             foreach ($changes as $item) {
-                $statusIcon = $item['new_status'] === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
-                $oldIcon = $item['old_status'] === 'open' ? 'Open' : 'Close';
-                $lines[] = "• *{$item['name']}* ({$item['code']})\n  Status: {$oldIcon} ➔ {$statusIcon}";
+                $parts = ["• *{$item['name']}* ({$item['code']})"];
+                if (!empty($item['status_changed'])) {
+                    $statusIcon = $item['new_status'] === 'open' ? '🟢 *OPEN*' : '🔴 *CLOSE*';
+                    $oldIcon = $item['old_status'] === 'open' ? 'Open' : 'Close';
+                    $parts[] = "  Status: {$oldIcon} ➔ {$statusIcon}";
+                }
+                if (!empty($item['price_changed'])) {
+                    $oldModalFmt = 'Rp ' . number_format((int) $item['old_modal'], 0, ',', '.');
+                    $newModalFmt = 'Rp ' . number_format((int) $item['new_modal'], 0, ',', '.');
+                    $priceLine = "  Modal H2H: {$oldModalFmt} ➔ *{$newModalFmt}*";
+                    if (!empty($item['selling_price']) && (int) $item['new_modal'] >= (int) $item['selling_price']) {
+                        $sellFmt = 'Rp ' . number_format((int) $item['selling_price'], 0, ',', '.');
+                        $priceLine .= "\n  ⚠️ *PERHATIAN:* Modal melebihi/sama dengan Harga Jual ({$sellFmt})!";
+                    }
+                    $parts[] = $priceLine;
+                }
+                $lines[] = implode("\n", $parts);
             }
 
             $listText = implode("\n\n", $lines);
 
-            $message = "📢 *UPDATE STATUS PRODUK OKEConnect*\n"
+            $message = "📢 *UPDATE PRODUK & MODAL OKEConnect*\n"
                      . "📅 Waktu: {$date}\n\n"
-                     . "Terdeteksi perubahan status pada produk berikut:\n\n"
+                     . "Terdeteksi perubahan otomatis dari supplier pada produk berikut:\n\n"
                      . "{$listText}\n\n"
                      . "ℹ️ _Pesan otomatis sistem RZK Store._";
 
             $whatsappService->sendToAdmin($message);
-            Log::info("OrderkuotaService: Notifikasi perubahan status dikirim ke WA Admin ({$adminPhone}).");
+            Log::info("OrderkuotaService: Notifikasi perubahan produk dikirim ke WA Admin ({$adminPhone}).");
         } catch (\Throwable $e) {
             Log::error("OrderkuotaService notifyAdminProductStatusChanges Exception: " . $e->getMessage());
         }

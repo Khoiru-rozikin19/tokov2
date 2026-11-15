@@ -74,6 +74,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::post('/transfer-to-balance', [AdminController::class, 'transferToBalance'])->name('transfer_to_balance');
     Route::get('/products', [AdminController::class, 'products'])->name('products');
+    Route::get('/products/lookup-okeconnect', [AdminController::class, 'lookupOkeconnectProduct'])->name('products.lookup_okeconnect');
     Route::post('/products', [AdminController::class, 'storeProduct'])->name('products.store');
     Route::post('/products/{id}/update', [AdminController::class, 'updateProduct'])->name('products.update');
     Route::post('/products/{id}/delete', [AdminController::class, 'deleteProduct'])->name('products.delete');
