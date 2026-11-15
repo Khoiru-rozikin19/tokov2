@@ -32,18 +32,18 @@
         
         @if(auth()->user()->role === 'admin')
             <!-- Hero Card 1: Saldo Orderkuota (Deep Blue) -->
-            <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xl shadow-blue-600/15 min-h-44">
+            <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="flex items-center space-x-2">
-                            <span class="text-xs font-bold text-blue-100 uppercase tracking-wider">Saldo Orderkuota (H2H)</span>
-                            <button id="refreshOrderkuotaBtn" class="p-1 rounded-lg bg-white/10 text-blue-100 hover:bg-white/20 hover:text-white transition-colors duration-150 focus:outline-none" title="Refresh Saldo Real-time">
+                            <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider">Saldo Orderkuota (H2H)</span>
+                            <button id="refreshOrderkuotaBtn" class="p-1 rounded-lg bg-white/10 text-blue-200 hover:bg-white/20 hover:text-white transition-colors duration-150 focus:outline-none" title="Refresh Saldo Real-time">
                                 <svg id="refreshIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
                                 </svg>
                             </button>
                         </div>
-                        <span id="orderkuotaBalanceText" class="text-3xl font-black mt-2.5 block tracking-tight">
+                        <span id="orderkuotaBalanceText" class="text-2xl sm:text-3xl font-black mt-2 block tracking-tight">
                             @if(is_numeric($orderkuotaBalance))
                                 Rp {{ number_format($orderkuotaBalance, 0, ',', '.') }}
                             @else
@@ -51,38 +51,38 @@
                             @endif
                         </span>
                     </div>
-                    <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
                     </div>
                 </div>
-                <div class="flex items-center justify-between mt-5 pt-3 border-t border-white/15 text-xs text-blue-100">
+                <div class="flex items-center justify-between mt-4 pt-3 border-t border-white/30 text-xs text-blue-100">
                     <span>Sisa Amunisi Modal di Supplier OKEConnect</span>
-                    <span class="font-semibold text-white/90">Real-time H2H</span>
+                    <span class="font-bold text-white">Real-time H2H</span>
                 </div>
             </div>
         @endif
 
         <!-- Hero Card 2: Total Keuntungan Bersih (Emerald Green) -->
-        <div class="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xl shadow-emerald-600/15 min-h-44">
+        <div class="bg-emerald-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-emerald-600/10 min-h-44">
             <div class="flex items-start justify-between">
                 <div>
-                    <div class="flex items-center space-x-2.5">
-                        <span class="text-xs font-bold text-emerald-100 uppercase tracking-wider">Total Keuntungan Bersih</span>
-                        <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-white/20 text-white">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Total Keuntungan Bersih</span>
+                        <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white">
                             {{ $totalRevenue > 0 ? round(($totalNetProfit / $totalRevenue) * 100, 1) : 0 }}% Margin
                         </span>
                     </div>
-                    <span class="text-3xl font-black mt-2.5 block tracking-tight">Rp {{ number_format($totalNetProfit ?? 0, 0, ',', '.') }}</span>
+                    <span class="text-2xl sm:text-3xl font-black mt-2 block tracking-tight">Rp {{ number_format($totalNetProfit ?? 0, 0, ',', '.') }}</span>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
             </div>
-            <div class="flex items-center justify-between mt-5 pt-3 border-t border-white/15 text-xs text-emerald-100">
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-white/30 text-xs text-emerald-100">
                 <span>Omzet dikurangi Modal H2H ({{ $totalSalesCount }} transaksi)</span>
                 <span class="font-bold text-white">Hari ini: +Rp {{ number_format($todayProfit ?? 0, 0, ',', '.') }}</span>
             </div>
