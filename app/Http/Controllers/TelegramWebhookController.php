@@ -270,6 +270,15 @@ class TelegramWebhookController extends Controller
                         $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                     }
 
+                    try {
+                        app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
+                            'topup_success',
+                            \App\Services\WhatsappService::formatTopupSuccessMessage($order)
+                        );
+                    } catch (\Throwable $e) {
+                        Log::error("TelegramWebhook: Failed to send WhatsApp topup notification for {$orderId}: " . $e->getMessage());
+                    }
+
                     return [
                         'success' => true,
                         'message' => "Top up {$orderId} approved and balance added.",
@@ -354,6 +363,23 @@ class TelegramWebhookController extends Controller
                                      . "Status transaksi telah diubah menjadi *SUKSES* dan pesanan diteruskan ke supplier.";
                     }
                     $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                try {
+                    $waService = app(\App\Services\WhatsappService::class);
+                    if ($order->is_preorder) {
+                        $waService->sendAutomatedNotification(
+                            'preorder_received',
+                            \App\Services\WhatsappService::formatPreorderMessage($order, false)
+                        );
+                    } else {
+                        $waService->sendAutomatedNotification(
+                            'order_success',
+                            \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'ACC Admin')
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("TelegramWebhook: Failed to send WhatsApp order notification for {$orderId}: " . $e->getMessage());
                 }
 
                 return [

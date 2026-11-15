@@ -243,6 +243,16 @@ class CatalogController extends Controller
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi pre-order ke Telegram: " . $e->getMessage());
                     }
+                    if (!app()->runningUnitTests()) {
+                        try {
+                            app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
+                                'preorder_received',
+                                \App\Services\WhatsappService::formatPreorderMessage($order, false)
+                            );
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi pre-order ke WhatsApp: " . $e->getMessage());
+                        }
+                    }
                 } elseif ($order && !app()->runningUnitTests()) {
                     try {
                         $telegramService = app(\App\Services\TelegramService::class);
@@ -260,6 +270,14 @@ class CatalogController extends Controller
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke Telegram: " . $e->getMessage());
+                    }
+                    try {
+                        app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
+                            'order_success',
+                            \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'Saldo Akun')
+                        );
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke WhatsApp: " . $e->getMessage());
                     }
                 }
             } catch (\Exception $e) {

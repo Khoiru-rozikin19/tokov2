@@ -285,6 +285,29 @@ class PaymentCallbackController extends Controller
                             Log::error("PaymentCallback: Failed to update Telegram message for order {$order->id}: " . $e->getMessage());
                         }
                     }
+
+                    // 5. Kirim notifikasi WhatsApp otomatis sesuai tujuan yang dicentang (Admin / Grup)
+                    try {
+                        $whatsappService = app(\App\Services\WhatsappService::class);
+                        if ($order->payment_method === 'topup_balance') {
+                            $whatsappService->sendAutomatedNotification(
+                                'topup_success',
+                                \App\Services\WhatsappService::formatTopupSuccessMessage($order)
+                            );
+                        } elseif ($order->is_preorder) {
+                            $whatsappService->sendAutomatedNotification(
+                                'preorder_received',
+                                \App\Services\WhatsappService::formatPreorderMessage($order, false)
+                            );
+                        } else {
+                            $whatsappService->sendAutomatedNotification(
+                                'order_success',
+                                \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'QRIS Otomatis')
+                            );
+                        }
+                    } catch (\Throwable $e) {
+                        Log::error("PaymentCallback: Failed to send WhatsApp notification for order {$order->id}: " . $e->getMessage());
+                    }
                 });
             }
 

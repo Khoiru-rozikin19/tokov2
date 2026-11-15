@@ -1,7 +1,7 @@
 @extends('layouts.app', ['title' => 'Manajemen Bot WhatsApp'])
 
 @section('content')
-<div class="space-y-6 sm:space-y-8 max-w-4xl">
+<div class="space-y-6 sm:space-y-8 max-w-6xl">
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
@@ -136,61 +136,156 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
 
-            <!-- Broadcast ke Grup Card -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-                <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center justify-between">
-                    <span class="flex items-center space-x-2">
-                        <span>📢</span> <span>Broadcast Pesan ke Grup WhatsApp</span>
-                    </span>
-                    <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 font-mono">
-                        {{ $groupId ?: 'Grup belum disimpan' }}
-                    </span>
+    <!-- Daftar Pesan Otomatis & Tujuan Pengiriman -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
+            <div>
+                <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 flex items-center space-x-2">
+                    <span>🤖</span> <span>Daftar Pesan Otomatis & Tujuan Pengiriman</span>
                 </h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Daftar seluruh template pesan yang telah dibuat dan dikirim otomatis pada kondisi tertentu. Pilih tujuan pengiriman di samping setiap pesan:
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px]">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                    👤 WA Admin: {{ $adminPhone ?: 'Belum diisi' }}
+                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                    👥 Grup: {{ $groupId ?: 'Belum diisi' }}
+                </span>
+            </div>
+        </div>
 
-                <div class="space-y-4">
-                    <div class="space-y-1.5">
-                        <label for="broadcast_message" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Isi Pesan Broadcast</label>
-                        <textarea id="broadcast_message" rows="4" placeholder="Ketik pesan informasi, promo, atau pengumuman yang ingin dikirim ke grup WhatsApp..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium transition-all duration-200 leading-relaxed"></textarea>
-                        <p class="text-[11px] text-slate-450 dark:text-slate-500 font-medium">Mendukung format teks WhatsApp: *tebal*, _miring_, ~coret~, dan baris baru.</p>
-                    </div>
+        <form action="{{ route('admin.whatsapp.auto_messages') }}" method="POST" class="space-y-4">
+            @csrf
 
-                    <div class="flex items-center justify-between pt-2">
-                        <div class="text-xs text-slate-500 dark:text-slate-400">
-                            Pesan akan dikirim langsung ke grup: <strong class="text-blue-600 dark:text-blue-400 font-semibold">RZK store</strong>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                @foreach($autoMessages as $item)
+                    @php
+                        $isAdminChecked = $autoMessageSettings[$item['key']]['admin'] ?? false;
+                        $isGroupChecked = $autoMessageSettings[$item['key']]['group'] ?? false;
+                    @endphp
+                    <div class="p-4 sm:p-5 bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
+                        <div class="flex flex-col lg:flex-row md:items-center justify-between gap-4">
+                            <!-- Left: Info Pesan & Kondisi -->
+                            <div class="flex-1 space-y-1.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-extrabold text-sm text-slate-800 dark:text-slate-100">{{ $item['title'] }}</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                                        {{ $item['badge'] }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    <strong class="text-slate-600 dark:text-slate-300">Kondisi:</strong> {{ $item['trigger'] }}
+                                </p>
+                                <div class="pt-1">
+                                    <button type="button" onclick="toggleAutoMsgPreview('{{ $item['key'] }}')" class="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center space-x-1">
+                                        <span>👁️</span> <span id="toggle-label-{{ $item['key'] }}">Lihat Contoh Isi Pesan</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Right: Checkboxes (1. WhatsApp Admin, 2. Grup yang Dipilih) -->
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                                <label class="flex items-center space-x-2.5 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                                    <input type="checkbox"
+                                           name="auto_messages[{{ $item['key'] }}][admin]"
+                                           value="1"
+                                           {{ $isAdminChecked ? 'checked' : '' }}
+                                           class="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500">
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">1. WhatsApp Admin</span>
+                                </label>
+
+                                <label class="flex items-center space-x-2.5 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 cursor-pointer transition-all">
+                                    <input type="checkbox"
+                                           name="auto_messages[{{ $item['key'] }}][group]"
+                                           value="1"
+                                           {{ $isGroupChecked ? 'checked' : '' }}
+                                           class="w-4 h-4 text-emerald-600 rounded border-slate-300 dark:border-slate-700 focus:ring-emerald-500">
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">2. Grup yang Dipilih</span>
+                                </label>
+                            </div>
                         </div>
-                        <button type="button" id="btn-broadcast-group" onclick="sendBroadcastGroup()" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs transition duration-200 shadow-md shadow-blue-500/20 active:scale-95 flex items-center space-x-2">
-                            <span>📢</span> <span>Kirim Broadcast Sekarang</span>
-                        </button>
+
+                        <!-- Collapsible Message Preview -->
+                        <div id="auto-msg-preview-{{ $item['key'] }}" class="hidden mt-3 p-3.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1.5">Format Pesan Otomatis:</span>
+                            <pre class="whitespace-pre-wrap font-mono text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{{ $item['preview'] }}</pre>
+                        </div>
                     </div>
-                    <div id="broadcast-result" class="hidden p-3.5 rounded-xl text-xs font-bold"></div>
-                </div>
+                @endforeach
             </div>
 
-            <!-- Testing Card -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
-                <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center space-x-2">
-                    <span>✉️</span> <span>Uji Coba Kirim Pesan Personal</span>
-                </h4>
+            <div class="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p class="text-[11px] text-slate-450 dark:text-slate-500">
+                    Pastikan <strong>Nomor WhatsApp Pribadi Admin</strong> atau <strong>ID Grup WhatsApp</strong> di atas sudah terisi dan status bot <strong>Aktif</strong>.
+                </p>
+                <button type="submit" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-extrabold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200 whitespace-nowrap">
+                    💾 Simpan Tujuan Pesan Otomatis
+                </button>
+            </div>
+        </form>
+    </div>
 
-                <div class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="space-y-1.5">
-                            <label for="test_phone" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Nomor WA Tujuan</label>
-                            <input type="text" id="test_phone" placeholder="Contoh: 08123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label for="test_message" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Isi Pesan</label>
-                            <input type="text" id="test_message" placeholder="Halo! Ini pesan tes." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="button" onclick="sendTestMessage()" class="px-5 py-3 bg-emerald-650 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs transition duration-200 shadow-md shadow-emerald-500/10">
-                            🚀 Kirim Pesan Uji Coba
-                        </button>
-                    </div>
-                    <div id="test-result" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+    <!-- Manual Broadcast & Testing Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+        <!-- Broadcast ke Grup Card -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center justify-between">
+                <span class="flex items-center space-x-2">
+                    <span>📢</span> <span>Broadcast Pesan ke Grup WhatsApp</span>
+                </span>
+                <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 font-mono">
+                    {{ $groupId ?: 'Grup belum disimpan' }}
+                </span>
+            </h4>
+
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label for="broadcast_message" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Isi Pesan Broadcast</label>
+                    <textarea id="broadcast_message" rows="4" placeholder="Ketik pesan informasi, promo, atau pengumuman yang ingin dikirim ke grup WhatsApp..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium transition-all duration-200 leading-relaxed"></textarea>
+                    <p class="text-[11px] text-slate-450 dark:text-slate-500 font-medium">Mendukung format teks WhatsApp: *tebal*, _miring_, ~coret~, dan baris baru.</p>
                 </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <div class="text-xs text-slate-500 dark:text-slate-400">
+                        Target: <strong class="text-blue-600 dark:text-blue-400 font-semibold">{{ $groupId ?: 'Grup belum diatur' }}</strong>
+                    </div>
+                    <button type="button" id="btn-broadcast-group" onclick="sendBroadcastGroup()" class="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-xs transition duration-200 shadow-md shadow-blue-500/20 active:scale-95 flex items-center space-x-2">
+                        <span>📢</span> <span>Kirim Broadcast Sekarang</span>
+                    </button>
+                </div>
+                <div id="broadcast-result" class="hidden p-3.5 rounded-xl text-xs font-bold"></div>
+            </div>
+        </div>
+
+        <!-- Testing Card -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <h4 class="font-extrabold text-sm text-slate-850 dark:text-slate-100 mb-5 border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center space-x-2">
+                <span>✉️</span> <span>Uji Coba Kirim Pesan Personal</span>
+            </h4>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label for="test_phone" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Nomor WA Tujuan</label>
+                        <input type="text" id="test_phone" placeholder="Contoh: 08123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label for="test_message" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Isi Pesan</label>
+                        <input type="text" id="test_message" placeholder="Halo! Ini pesan tes." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold transition-all duration-200">
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="sendTestMessage()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs transition duration-200 shadow-md shadow-emerald-500/10">
+                        🚀 Kirim Pesan Uji Coba
+                    </button>
+                </div>
+                <div id="test-result" class="hidden p-3 rounded-xl text-xs font-bold"></div>
             </div>
         </div>
     </div>
@@ -418,6 +513,17 @@
             resultDiv.className = 'p-3 rounded-xl text-xs font-bold bg-red-50 text-red-650 border border-red-200/30';
             resultDiv.textContent = '❌ Terjadi kesalahan jaringan. Pastikan API gateway sudah dinyalakan.';
         });
+    }
+
+    function toggleAutoMsgPreview(key) {
+        const preview = document.getElementById('auto-msg-preview-' + key);
+        const label = document.getElementById('toggle-label-' + key);
+        if (!preview) return;
+
+        const isHidden = preview.classList.toggle('hidden');
+        if (label) {
+            label.textContent = isHidden ? 'Lihat Contoh Isi Pesan' : 'Sembunyikan Isi Pesan';
+        }
     }
 </script>
 @endsection

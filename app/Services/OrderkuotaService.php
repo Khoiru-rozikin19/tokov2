@@ -473,6 +473,17 @@ class OrderkuotaService
                         Log::error("OrderkuotaService: Gagal memperbarui Telegram pre-order {$order->id}: " . $te->getMessage());
                     }
                 }
+
+                // Kirim notifikasi WhatsApp otomatis sesuai tujuan yang dicentang (Admin / Grup)
+                try {
+                    $whatsappService = app(\App\Services\WhatsappService::class);
+                    $whatsappService->sendAutomatedNotification(
+                        'preorder_received',
+                        \App\Services\WhatsappService::formatPreorderMessage($order, true)
+                    );
+                } catch (\Throwable $we) {
+                    Log::error("OrderkuotaService: Gagal mengirim WhatsApp pre-order {$order->id}: " . $we->getMessage());
+                }
  
                 // Proteksi Rate Limiting: Berikan jeda 1 detik per transaksi agar IP VPS tidak diblokir supplier
                 if (!app()->runningUnitTests()) {
@@ -485,15 +496,35 @@ class OrderkuotaService
     }
 
     /**
-     * Send current snapshot of all supplier products status to Admin via WhatsApp.
+     * Send current snapshot of all supplier products status to Admin/Group via WhatsApp.
      */
     public function sendManualStatusToAdmin(): array
     {
-        $adminPhone = Setting::get('whatsapp_bot_admin_phone');
-        if (empty($adminPhone)) {
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $sendAdmin = $whatsappService->isAutoTargetEnabled('okeconnect_manual_stock', 'admin');
+        $sendGroup = $whatsappService->isAutoTargetEnabled('okeconnect_manual_stock', 'group');
+
+        if (!$sendAdmin && !$sendGroup) {
+            return [
+                'success' => false,
+                'message' => 'Tujuan kirim Laporan Cek Stok belum dicentang (pilih WhatsApp Admin dan/atau Grup yang Dipilih).'
+            ];
+        }
+
+        $adminPhone = trim((string) Setting::get('whatsapp_bot_admin_phone', ''));
+        $groupId = trim((string) Setting::get('whatsapp_bot_group_id', ''));
+
+        if ($sendAdmin && !$sendGroup && empty($adminPhone)) {
             return [
                 'success' => false,
                 'message' => 'Nomor WhatsApp Pribadi Admin belum diatur di menu Bot WhatsApp.'
+            ];
+        }
+
+        if ($sendGroup && !$sendAdmin && empty($groupId)) {
+            return [
+                'success' => false,
+                'message' => 'ID Grup WhatsApp belum diatur di menu Bot WhatsApp.'
             ];
         }
 
@@ -526,19 +557,25 @@ class OrderkuotaService
                  . "{$listText}\n\n"
                  . "ℹ️ _Pesan permintaan cek stok manual sistem RZK Store._";
 
-        $whatsappService = app(\App\Services\WhatsappService::class);
-        $sent = $whatsappService->sendToAdmin($message);
+        $results = $whatsappService->sendAutomatedNotification('okeconnect_manual_stock', $message);
+        $targetsSent = [];
+        if (!empty($results['admin'])) {
+            $targetsSent[] = "WA Admin ({$adminPhone})";
+        }
+        if (!empty($results['group'])) {
+            $targetsSent[] = "Grup ({$groupId})";
+        }
 
-        if ($sent) {
+        if (!empty($targetsSent)) {
             return [
                 'success' => true,
-                'message' => "Laporan status produk berhasil dikirim ke nomor WhatsApp {$adminPhone}!"
+                'message' => "Laporan status produk berhasil dikirim ke: " . implode(' & ', $targetsSent) . "!"
             ];
         }
 
         return [
             'success' => false,
-            'message' => 'Gagal mengirim pesan ke WhatsApp. Pastikan gateway bot aktif dan terhubung.'
+            'message' => 'Gagal mengirim pesan ke WhatsApp. Pastikan Bot WhatsApp aktif, terhubung, dan nomor/ID grup tujuan sudah terisi.'
         ];
     }
 
@@ -639,15 +676,16 @@ class OrderkuotaService
     }
 
     /**
-     * Send WhatsApp notification to Admin when products change status or modal price.
+     * Send WhatsApp notification to Admin and/or Group when products change status or modal price.
      */
     protected function notifyAdminProductStatusChanges(array $changes): void
     {
         try {
             $whatsappService = app(\App\Services\WhatsappService::class);
-            $adminPhone = Setting::get('whatsapp_bot_admin_phone');
+            $sendAdmin = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'admin');
+            $sendGroup = $whatsappService->isAutoTargetEnabled('okeconnect_status_change', 'group');
 
-            if (empty($adminPhone)) {
+            if (!$sendAdmin && !$sendGroup) {
                 return;
             }
 
@@ -681,8 +719,8 @@ class OrderkuotaService
                      . "{$listText}\n\n"
                      . "ℹ️ _Pesan otomatis sistem RZK Store._";
 
-            $whatsappService->sendToAdmin($message);
-            Log::info("OrderkuotaService: Notifikasi perubahan produk dikirim ke WA Admin ({$adminPhone}).");
+            $results = $whatsappService->sendAutomatedNotification('okeconnect_status_change', $message);
+            Log::info("OrderkuotaService: Notifikasi perubahan produk WA selesai (Admin=" . ($results['admin'] ? 'ok' : 'no') . ", Group=" . ($results['group'] ? 'ok' : 'no') . ").");
         } catch (\Throwable $e) {
             Log::error("OrderkuotaService notifyAdminProductStatusChanges Exception: " . $e->getMessage());
         }

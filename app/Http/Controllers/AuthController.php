@@ -154,6 +154,19 @@ class AuthController extends Controller
             Log::error("Failed to send Telegram user registration notification: " . $e->getMessage());
         }
 
+        // Kirim Notifikasi WhatsApp Otomatis sesuai tujuan yang dicentang (Admin / Grup)
+        if (!app()->runningUnitTests()) {
+            try {
+                $whatsappService = app(WhatsappService::class);
+                $whatsappService->sendAutomatedNotification(
+                    'user_registration',
+                    WhatsappService::formatUserRegistrationMessage($user)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Failed to send WhatsApp user registration notification: " . $e->getMessage());
+            }
+        }
+
         if ($whatsappService->isOtpEnabled()) {
             $otp = (string) rand(100000, 999999);
             $user->update([

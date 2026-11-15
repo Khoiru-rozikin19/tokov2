@@ -1425,7 +1425,31 @@ class AdminController extends Controller
             'otpEnabled' => \App\Models\Setting::get('whatsapp_bot_otp_enabled', '0'),
             'adminPhone' => \App\Models\Setting::get('whatsapp_bot_admin_phone', ''),
             'groupId' => \App\Models\Setting::get('whatsapp_bot_group_id', ''),
+            'autoMessages' => \App\Services\WhatsappService::getAutomatedMessageCatalog(),
+            'autoMessageSettings' => $whatsappService->getAutoNotificationSettings(),
         ]);
+    }
+
+    /**
+     * Update WhatsApp automated message delivery targets (WhatsApp Admin / Selected Group).
+     */
+    public function updateWhatsappAutoMessages(Request $request)
+    {
+        $submitted = $request->input('auto_messages', []);
+        if (!is_array($submitted)) {
+            $submitted = [];
+        }
+
+        foreach (\App\Services\WhatsappService::getAutomatedMessageCatalog() as $item) {
+            $key = $item['key'];
+            $adminVal = !empty($submitted[$key]['admin']) ? '1' : '0';
+            $groupVal = !empty($submitted[$key]['group']) ? '1' : '0';
+
+            \App\Models\Setting::set("whatsapp_auto_{$key}_admin", $adminVal);
+            \App\Models\Setting::set("whatsapp_auto_{$key}_group", $groupVal);
+        }
+
+        return redirect()->back()->with('success', 'Pengaturan tujuan pengiriman pesan otomatis berhasil disimpan!');
     }
 
     /**

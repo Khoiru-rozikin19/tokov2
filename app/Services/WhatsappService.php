@@ -178,8 +178,256 @@ class WhatsappService
         $refCode = strtoupper(substr(md5(uniqid()), 0, 4));
         $timestamp = date('H:i:s');
         $message = "{$template}\n\n_Ref: [{$refCode}] • Waktu: {$timestamp}_";
-                 
-        return $this->sendGenericMessage($phone, $message);
+
+        $sent = $this->sendGenericMessage($phone, $message);
+
+        if ($sent) {
+            $adminAlert = "🔐 *AKTIVITAS OTP WHATSAPP*\n"
+                        . "📱 *Nomor Tujuan:* +{$phone}\n"
+                        . "🔑 *Kode OTP:* `{$otpCode}`\n"
+                        . "⏰ *Waktu:* {$timestamp}\n\n"
+                        . "ℹ️ _Pesan otomatis sistem RZK Store._";
+            $groupAlert = "🔐 *AKTIVITAS OTP WHATSAPP*\n"
+                        . "📱 *Nomor Tujuan:* +{$phone}\n"
+                        . "🔑 *Kode OTP:* `******` _(disensor untuk keamanan grup)_\n"
+                        . "⏰ *Waktu:* {$timestamp}\n\n"
+                        . "ℹ️ _Pesan otomatis sistem RZK Store._";
+            $this->sendAutomatedNotification('user_otp_alert', $adminAlert, $groupAlert);
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Catalog of all automated/condition-triggered messages in the system.
+     */
+    public static function getAutomatedMessageCatalog(): array
+    {
+        return [
+            [
+                'key' => 'okeconnect_status_change',
+                'title' => 'Update Status & Harga Modal Produk OKEConnect',
+                'badge' => 'Otomatis Sinkron',
+                'trigger' => 'Dikirim otomatis saat sinkronisasi OKEConnect (tiap 5 menit / tombol sinkron) mendeteksi perubahan status Open ↔ Close atau perubahan harga modal supplier.',
+                'default_admin' => '1',
+                'default_group' => '0',
+                'preview' => "📢 *UPDATE PRODUK & MODAL OKEConnect*\n"
+                           . "📅 Waktu: 16-11-2026 06:30:00\n\n"
+                           . "Terdeteksi perubahan otomatis dari supplier pada produk berikut:\n\n"
+                           . "• *XL 15GB V1* (XLA15)\n"
+                           . "  Status: Open ➔ 🔴 *CLOSE*\n"
+                           . "  Modal H2H: Rp 14.500 ➔ *Rp 15.000*\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'okeconnect_manual_stock',
+                'title' => 'Laporan Status Stok Produk OKEConnect (Cek Manual)',
+                'badge' => 'Tombol Cek Stok',
+                'trigger' => 'Dikirim saat Admin menekan tombol "Kirim Cek Stok ke WA Saya" pada panel Bot WhatsApp.',
+                'default_admin' => '1',
+                'default_group' => '0',
+                'preview' => "📊 *STATUS STOK PRODUK OKECONNECT (MANUAL CHECK)*\n"
+                           . "📅 Waktu: 16-11-2026 06:30:00\n\n"
+                           . "Berikut status terkini produk supplier Anda:\n\n"
+                           . "• *XL 15GB V1* (XLA15)\n"
+                           . "  Modal: Rp 14.500 | Status: 🟢 *OPEN*\n\n"
+                           . "ℹ️ _Pesan permintaan cek stok manual sistem RZK Store._",
+            ],
+            [
+                'key' => 'order_success',
+                'title' => 'Notifikasi Transaksi Produk Baru / Pembayaran Sukses',
+                'badge' => 'Transaksi Produk',
+                'trigger' => 'Dikirim otomatis saat pembelian produk berhasil dibayar via QRIS otomatis, Saldo Akun, atau disetujui Admin.',
+                'default_admin' => '0',
+                'default_group' => '0',
+                'preview' => "✅ *TRANSAKSI PRODUK SUKSES*\n"
+                           . "📦 *ID Order:* ORD-XXXXXXXX\n"
+                           . "🛍️ *Produk:* XL 15GB V1\n"
+                           . "💳 *Metode:* Saldo Akun / QRIS\n"
+                           . "💰 *Nominal:* Rp 18.000\n"
+                           . "👤 *Pelanggan:* buyer@email.com\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'preorder_received',
+                'title' => 'Notifikasi Pre-Order Masuk & Terproses Otomatis',
+                'badge' => 'Pre-Order',
+                'trigger' => 'Dikirim otomatis saat Pre-Order diterima (PROSES) atau saat produk supplier kembali OPEN dan Pre-Order otomatis diteruskan (SUKSES).',
+                'default_admin' => '0',
+                'default_group' => '0',
+                'preview' => "⏳ *PRE-ORDER DITERIMA / DIPROSES OTOMATIS*\n"
+                           . "📦 *ID Order:* ORD-XXXXXXXX\n"
+                           . "🛍️ *Produk:* XL 15GB V1\n"
+                           . "📱 *No Tujuan:* 0878xxxxxxxx\n"
+                           . "💰 *Nominal:* Rp 18.000\n"
+                           . "👤 *Pelanggan:* buyer@email.com\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'topup_success',
+                'title' => 'Notifikasi Top Up Saldo Akun Sukses',
+                'badge' => 'Top Up Saldo',
+                'trigger' => 'Dikirim otomatis saat top up saldo pengguna via QRIS berhasil diverifikasi dan saldo masuk ke akun.',
+                'default_admin' => '0',
+                'default_group' => '0',
+                'preview' => "💵 *TOP UP SALDO SUKSES*\n"
+                           . "📦 *ID Top Up:* TOP-XXXXXXXX\n"
+                           . "💰 *Nominal Saldo:* Rp 100.000\n"
+                           . "👤 *Pelanggan:* buyer@email.com\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'user_registration',
+                'title' => 'Notifikasi Pendaftaran Akun Baru',
+                'badge' => 'Registrasi User',
+                'trigger' => 'Dikirim otomatis saat ada pengguna baru mendaftar akun di website.',
+                'default_admin' => '0',
+                'default_group' => '0',
+                'preview' => "🔔 *PENDAFTARAN AKUN BARU*\n"
+                           . "👤 *Nama:* Budi Santoso\n"
+                           . "📧 *Email:* budi@email.com\n"
+                           . "📱 *WhatsApp:* 628123456789\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+            [
+                'key' => 'user_otp_alert',
+                'title' => 'Salinan Aktivitas Pengiriman Kode OTP User',
+                'badge' => 'Keamanan / OTP',
+                'trigger' => 'Dikirim otomatis setiap sistem mengirim kode OTP ke WhatsApp user (Registrasi, Lupa Password, Ubah No. WA). OTP utama selalu ke WA user; kode OTP disensor ****** jika dikirim ke Grup.',
+                'default_admin' => '0',
+                'default_group' => '0',
+                'preview' => "🔐 *AKTIVITAS OTP WHATSAPP*\n"
+                           . "📱 *Nomor Tujuan:* +628123456789\n"
+                           . "🔑 *Kode OTP:* 123456\n"
+                           . "⏰ *Waktu:* 06:30:00\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
+        ];
+    }
+
+    /**
+     * Check whether a target ('admin' or 'group') is enabled for a specific automated message event.
+     */
+    public function isAutoTargetEnabled(string $eventKey, string $target): bool
+    {
+        $catalog = collect(self::getAutomatedMessageCatalog())->keyBy('key');
+        $item = $catalog->get($eventKey);
+        $default = $target === 'admin'
+            ? ($item['default_admin'] ?? '0')
+            : ($item['default_group'] ?? '0');
+
+        return Setting::get("whatsapp_auto_{$eventKey}_{$target}", $default) === '1';
+    }
+
+    /**
+     * Get all automated notification target checkboxes keyed by event key.
+     */
+    public function getAutoNotificationSettings(): array
+    {
+        $settings = [];
+        foreach (self::getAutomatedMessageCatalog() as $item) {
+            $key = $item['key'];
+            $settings[$key] = [
+                'admin' => $this->isAutoTargetEnabled($key, 'admin'),
+                'group' => $this->isAutoTargetEnabled($key, 'group'),
+            ];
+        }
+        return $settings;
+    }
+
+    /**
+     * Dispatch an automated WhatsApp message to checked destinations (WhatsApp Admin and/or Selected Group).
+     */
+    public function sendAutomatedNotification(string $eventKey, string $adminMessage, ?string $groupMessage = null): array
+    {
+        $result = ['admin' => false, 'group' => false];
+
+        if (!$this->enabled) {
+            Log::info("WhatsappService: Bot is disabled. Skipping automated notification '{$eventKey}'.");
+            return $result;
+        }
+
+        if ($this->isAutoTargetEnabled($eventKey, 'admin')) {
+            $result['admin'] = $this->sendToAdmin($adminMessage);
+        }
+
+        if ($this->isAutoTargetEnabled($eventKey, 'group')) {
+            $result['group'] = $this->sendGroupMessage($groupMessage ?? $adminMessage);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Format automated WhatsApp message for a completed product order.
+     */
+    public static function formatOrderSuccessMessage(\App\Models\Order $order, string $sourceLabel = 'Otomatis'): string
+    {
+        $productName = $order->product ? $order->product->name : 'Produk';
+        $method = strtoupper((string) ($order->payment_method ?: 'QRIS'));
+        $amountFmt = 'Rp ' . number_format((int) $order->total_amount, 0, ',', '.');
+        $targetLine = !empty($order->target_phone) ? "📱 *No Tujuan:* {$order->target_phone}\n" : '';
+
+        return "✅ *TRANSAKSI PRODUK SUKSES ({$sourceLabel})*\n"
+             . "📦 *ID Order:* {$order->id}\n"
+             . "🛍️ *Produk:* {$productName}\n"
+             . $targetLine
+             . "💳 *Metode:* {$method}\n"
+             . "💰 *Nominal:* {$amountFmt}\n"
+             . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n\n"
+             . "ℹ️ _Pesan otomatis sistem RZK Store._";
+    }
+
+    /**
+     * Format automated WhatsApp message for pre-order received or auto-completed.
+     */
+    public static function formatPreorderMessage(\App\Models\Order $order, bool $completed = false): string
+    {
+        $productName = $order->product ? $order->product->name : 'Produk';
+        $amountFmt = 'Rp ' . number_format((int) $order->total_amount, 0, ',', '.');
+        $targetPhone = $order->target_phone ?: '-';
+        $header = $completed
+            ? "✅ *PRE-ORDER BERHASIL DIPROSES (OTOMATIS)*"
+            : "⏳ *PRE-ORDER BARU DITERIMA*";
+        $footer = $completed
+            ? "Supplier sudah OPEN dan pre-order berhasil diteruskan."
+            : "Status *PROSES* — akan diteruskan otomatis saat supplier OPEN.";
+
+        return "{$header}\n"
+             . "📦 *ID Order:* {$order->id}\n"
+             . "🛍️ *Produk:* {$productName}\n"
+             . "📱 *No Tujuan:* {$targetPhone}\n"
+             . "💰 *Nominal:* {$amountFmt}\n"
+             . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n\n"
+             . "{$footer}\n"
+             . "ℹ️ _Pesan otomatis sistem RZK Store._";
+    }
+
+    /**
+     * Format automated WhatsApp message for a verified top-up balance order.
+     */
+    public static function formatTopupSuccessMessage(\App\Models\Order $order): string
+    {
+        $amountFmt = 'Rp ' . number_format((int) $order->base_amount, 0, ',', '.');
+        $totalFmt = 'Rp ' . number_format((int) $order->total_amount, 0, ',', '.');
+
+        return "💵 *TOP UP SALDO SUKSES*\n"
+             . "📦 *ID Top Up:* {$order->id}\n"
+             . "💰 *Saldo Masuk:* {$amountFmt} (Bayar: {$totalFmt})\n"
+             . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n\n"
+             . "ℹ️ _Pesan otomatis sistem RZK Store._";
+    }
+
+    /**
+     * Format automated WhatsApp message for a newly registered user.
+     */
+    public static function formatUserRegistrationMessage(\App\Models\User $user): string
+    {
+        return "🔔 *PENDAFTARAN AKUN BARU*\n"
+             . "👤 *Nama:* {$user->name}\n"
+             . "📧 *Email:* {$user->email}\n"
+             . "📱 *WhatsApp:* {$user->phone}\n\n"
+             . "ℹ️ _Pesan otomatis sistem RZK Store._";
     }
 
     /**
