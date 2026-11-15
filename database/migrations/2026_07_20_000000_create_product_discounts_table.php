@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete()->unique();
             $table->decimal('discount_amount', 15, 2)->default(0);
             $table->json('roles');
+            $table->json('payment_methods')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

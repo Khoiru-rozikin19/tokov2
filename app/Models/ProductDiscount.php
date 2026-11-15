@@ -13,12 +13,14 @@ class ProductDiscount extends Model
         'product_id',
         'discount_amount',
         'roles',
+        'payment_methods',
         'is_active',
     ];
 
     protected $casts = [
         'discount_amount' => 'decimal:2',
         'roles' => 'array',
+        'payment_methods' => 'array',
         'is_active' => 'boolean',
     ];
 

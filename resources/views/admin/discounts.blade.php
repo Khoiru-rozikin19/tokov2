@@ -46,6 +46,7 @@
                         <th class="py-4.5 px-6">Potongan Diskon</th>
                         <th class="py-4.5 px-6">Harga Final</th>
                         <th class="py-4.5 px-6">Berlaku Untuk Role</th>
+                        <th class="py-4.5 px-6">Metode Bayar</th>
                         <th class="py-4.5 px-6">Status</th>
                         <th class="py-4.5 px-6 text-center">Aksi</th>
                     </tr>
@@ -95,6 +96,23 @@
                                     @endif
                                 </div>
                             </td>
+                            @php
+                                $methods = is_array($discount->payment_methods) ? $discount->payment_methods : (json_decode($discount->payment_methods, true) ?: ['qris', 'balance']);
+                            @endphp
+                            <td class="py-4.5 px-6">
+                                <div class="flex flex-wrap gap-1.5">
+                                    @if(in_array('qris', $methods))
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                                            QRIS
+                                        </span>
+                                    @endif
+                                    @if(in_array('balance', $methods))
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                                            Saldo Akun
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="py-4.5 px-6">
                                 @if($discount->is_active)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
@@ -139,7 +157,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-12 text-center text-slate-400">
+                            <td colspan="8" class="py-12 text-center text-slate-400">
                                 Belum ada aturan diskon yang dibuat. Klik tombol "Tambah Diskon" untuk membuat aturan baru.
                             </td>
                         </tr>
@@ -194,6 +212,22 @@
                     </label>
                 </div>
                 <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Centang role yang boleh membeli dengan harga diskon.</p>
+            </div>
+
+            <!-- Metode Pembayaran Checkbox -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2.5">Pilih Metode Pembayaran</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                        <input type="checkbox" name="payment_methods[]" value="qris" checked class="w-4.5 h-4.5 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500">
+                        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">QRIS</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                        <input type="checkbox" name="payment_methods[]" value="balance" checked class="w-4.5 h-4.5 text-emerald-600 rounded border-slate-300 dark:border-slate-700 focus:ring-emerald-500">
+                        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Saldo Akun</span>
+                    </label>
+                </div>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Centang metode pembayaran yang mendapatkan potongan harga.</p>
             </div>
 
             <!-- Potongan Harga -->
@@ -267,6 +301,22 @@
                         <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Admin</span>
                     </label>
                 </div>
+            </div>
+
+            <!-- Metode Pembayaran Checkbox -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2.5">Pilih Metode Pembayaran</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                        <input type="checkbox" id="edit_method_qris" name="payment_methods[]" value="qris" class="w-4.5 h-4.5 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500">
+                        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">QRIS</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                        <input type="checkbox" id="edit_method_balance" name="payment_methods[]" value="balance" class="w-4.5 h-4.5 text-emerald-600 rounded border-slate-300 dark:border-slate-700 focus:ring-emerald-500">
+                        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Saldo Akun</span>
+                    </label>
+                </div>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Centang metode pembayaran yang mendapatkan potongan harga.</p>
             </div>
 
             <!-- Potongan Harga -->
@@ -361,6 +411,10 @@
         document.getElementById('edit_role_buyer').checked = roles.includes('buyer');
         document.getElementById('edit_role_seller').checked = roles.includes('seller');
         document.getElementById('edit_role_admin').checked = roles.includes('admin');
+
+        const paymentMethods = Array.isArray(discount.payment_methods) ? discount.payment_methods : (typeof discount.payment_methods === 'string' ? JSON.parse(discount.payment_methods || '[]') : ['qris', 'balance']);
+        document.getElementById('edit_method_qris').checked = paymentMethods.includes('qris');
+        document.getElementById('edit_method_balance').checked = paymentMethods.includes('balance');
 
         document.getElementById('edit_discount_amount').value = Math.round(discount.discount_amount);
         document.getElementById('editDiscountForm').action = `/admin/discounts/${discount.id}/update`;

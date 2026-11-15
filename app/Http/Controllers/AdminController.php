@@ -1013,10 +1013,14 @@ class AdminController extends Controller
             'discount_amount' => 'required|numeric|min:1',
             'roles' => 'required|array|min:1',
             'roles.*' => 'in:buyer,seller,admin',
+            'payment_methods' => 'required|array|min:1',
+            'payment_methods.*' => 'in:qris,balance',
         ], [
             'product_id.unique' => 'Produk ini sudah memiliki aturan diskon. Silakan edit aturan yang sudah ada.',
             'roles.required' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
             'roles.min' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
+            'payment_methods.required' => 'Pilih minimal satu metode pembayaran untuk diskon ini.',
+            'payment_methods.min' => 'Pilih minimal satu metode pembayaran untuk diskon ini.',
         ]);
 
         $product = Product::findOrFail($request->product_id);
@@ -1030,6 +1034,7 @@ class AdminController extends Controller
             'product_id' => $request->product_id,
             'discount_amount' => $request->discount_amount,
             'roles' => $request->roles,
+            'payment_methods' => $request->payment_methods,
             'is_active' => true,
         ]);
 
@@ -1052,9 +1057,13 @@ class AdminController extends Controller
             'discount_amount' => 'required|numeric|min:1',
             'roles' => 'required|array|min:1',
             'roles.*' => 'in:buyer,seller,admin',
+            'payment_methods' => 'required|array|min:1',
+            'payment_methods.*' => 'in:qris,balance',
         ], [
             'roles.required' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
             'roles.min' => 'Pilih minimal satu role yang berhak mendapatkan diskon.',
+            'payment_methods.required' => 'Pilih minimal satu metode pembayaran untuk diskon ini.',
+            'payment_methods.min' => 'Pilih minimal satu metode pembayaran untuk diskon ini.',
         ]);
 
         if ($discount->product && $request->discount_amount > $discount->product->price) {
@@ -1065,6 +1074,7 @@ class AdminController extends Controller
         $discount->update([
             'discount_amount' => $request->discount_amount,
             'roles' => $request->roles,
+            'payment_methods' => $request->payment_methods,
         ]);
 
         return redirect()->route('admin.discounts')

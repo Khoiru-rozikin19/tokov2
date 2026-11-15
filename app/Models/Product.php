@@ -64,9 +64,9 @@ class Product extends Model
     }
 
     /**
-     * Get discount amount applicable for a given user (defaults to authenticated user).
+     * Get discount amount applicable for a given user and optional payment method (defaults to authenticated user).
      */
-    public function getDiscountAmountForUser(?User $user = null): int
+    public function getDiscountAmountForUser(?User $user = null, ?string $paymentMethod = null): int
     {
         $user = $user ?? auth()->user();
         if (!$user) {
@@ -79,19 +79,29 @@ class Product extends Model
         }
 
         $roles = is_array($discount->roles) ? $discount->roles : (json_decode($discount->roles, true) ?: []);
-        if (in_array($user->role, $roles, true)) {
-            return min((int) $this->price, (int) round($discount->discount_amount));
+        if (!in_array($user->role, $roles, true)) {
+            return 0;
         }
 
-        return 0;
+        // Validate payment method if specified
+        if ($paymentMethod !== null) {
+            $paymentMethods = is_array($discount->payment_methods) 
+                ? $discount->payment_methods 
+                : (json_decode($discount->payment_methods, true) ?: ['qris', 'balance']);
+            if (!in_array($paymentMethod, $paymentMethods, true)) {
+                return 0;
+            }
+        }
+
+        return min((int) $this->price, (int) round($discount->discount_amount));
     }
 
     /**
      * Get final price for a given user after discount (defaults to authenticated user).
      */
-    public function getFinalPriceForUser(?User $user = null): int
+    public function getFinalPriceForUser(?User $user = null, ?string $paymentMethod = null): int
     {
-        $discountAmount = $this->getDiscountAmountForUser($user);
+        $discountAmount = $this->getDiscountAmountForUser($user, $paymentMethod);
         return max(0, (int) $this->price - $discountAmount);
     }
 

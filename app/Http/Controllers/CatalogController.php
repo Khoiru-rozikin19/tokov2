@@ -125,7 +125,7 @@ class CatalogController extends Controller
         // === BALANCE PAYMENT ===
         if ($paymentMethod === 'balance') {
             $user = auth()->user();
-            $price = $product->getFinalPriceForUser($user);
+            $price = $product->getFinalPriceForUser($user, 'balance');
             $orderId = 'ORD-' . strtoupper(Str::random(8));
 
             try {
@@ -308,7 +308,7 @@ class CatalogController extends Controller
         }
 
         // Pick a random code
-        $effectivePrice = $product->getFinalPriceForUser(auth()->user());
+        $effectivePrice = $product->getFinalPriceForUser(auth()->user(), 'qris');
         $uniqueCode = $availableCodes[array_rand($availableCodes)];
         $totalAmount = $effectivePrice + $uniqueCode;
 

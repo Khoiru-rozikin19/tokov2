@@ -51,8 +51,13 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         @forelse($products as $product)
             @php
-                $discountAmount = $product->getDiscountAmountForUser();
-                $finalPrice = $product->getFinalPriceForUser();
+                $finalPriceQris = $product->getFinalPriceForUser(auth()->user(), 'qris');
+                $finalPriceBalance = $product->getFinalPriceForUser(auth()->user(), 'balance');
+                $discountQris = $product->getDiscountAmountForUser(auth()->user(), 'qris');
+                $discountBalance = $product->getDiscountAmountForUser(auth()->user(), 'balance');
+                $hasDiscount = ($discountQris > 0 || $discountBalance > 0);
+                $cardDiscountAmount = max($discountQris, $discountBalance);
+                $cardFinalPrice = min($finalPriceQris, $finalPriceBalance);
             @endphp
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-sm">
                 <div>
@@ -71,7 +76,7 @@
                                 </span>
                             @endif
 
-                            @if($discountAmount > 0)
+                            @if($hasDiscount)
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
                                     Diskon
                                 </span>
@@ -133,21 +138,21 @@
                 <!-- Footer Card Info & Action -->
                 <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 dark:border-slate-800">
                     <div class="flex flex-col">
-                        @if($discountAmount > 0)
+                        @if($hasDiscount)
                             <span class="text-[10px] text-slate-400 dark:text-slate-500 line-through leading-tight">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
-                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight">Rp {{ number_format($finalPrice, 0, ',', '.') }}</span>
+                            <span class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight">Rp {{ number_format($cardFinalPrice, 0, ',', '.') }}</span>
                         @else
                             <span class="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                         @endif
                     </div>
                     <div class="flex space-x-1.5">
-                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $finalPrice }}', '{{ $product->duration_days }}', this.getAttribute('data-description'), '{{ $product->price }}', '{{ $discountAmount }}')" class="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $cardFinalPrice }}', '{{ $product->duration_days }}', this.getAttribute('data-description'), '{{ $product->price }}', '{{ $cardDiscountAmount }}')" class="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
                             Detail
                         </button>
                         
                         @if($product->stock > 0 && (($product->status ?? 'open') === 'open' || !empty($product->orderkuota_product_code)) && $qris_configured)
                             @auth
-                                <button onclick="openBuyModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $finalPrice }}, '{{ $product->orderkuota_product_code }}', {{ ($product->status ?? 'open') === 'close' ? 'true' : 'false' }}, {{ $product->price }}, {{ $discountAmount }})" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
+                                <button onclick="openBuyModal({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}', {{ ($product->status ?? 'open') === 'close' ? 'true' : 'false' }}, {{ $finalPriceQris }}, {{ $discountQris }}, {{ $finalPriceBalance }}, {{ $discountBalance }})" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                     <span>{{ ($product->status ?? 'open') === 'close' ? 'Pre-Order' : 'Beli' }}</span>
                                 </button>
@@ -383,20 +388,38 @@
         document.getElementById('detailModal').classList.add('hidden');
     }
 
-    // Open buy modal
-    function openBuyModal(productId, productName, productPrice, hasSupplierCode, isClosed, normalPrice, discountAmount) {
-        document.getElementById('formProductId').value = productId;
-        document.getElementById('modalProductTitle').innerText = productName;
+    let currentBuyPricing = null;
+    let currentUserBalance = 0;
+
+    function updateModalPriceDisplay(method) {
+        if (!currentBuyPricing) return;
+        const targetPrice = (method === 'balance') ? currentBuyPricing.priceBalance : currentBuyPricing.priceQris;
+        const targetDisc = (method === 'balance') ? currentBuyPricing.discBalance : currentBuyPricing.discQris;
         
-        if (discountAmount && parseInt(discountAmount) > 0) {
+        if (targetDisc && parseInt(targetDisc) > 0) {
             document.getElementById('modalProductPrice').innerHTML = `
-                <span class="text-emerald-600 dark:text-emerald-400">Rp ${parseInt(productPrice).toLocaleString('id-ID')}</span>
-                <span class="text-xs text-slate-400 line-through font-normal ml-1.5">Rp ${parseInt(normalPrice).toLocaleString('id-ID')}</span>
-                <span class="ml-1.5 px-2 py-0.5 text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-md">Diskon Rp ${parseInt(discountAmount).toLocaleString('id-ID')}</span>
+                <span class="text-emerald-600 dark:text-emerald-400">Rp ${parseInt(targetPrice).toLocaleString('id-ID')}</span>
+                <span class="text-xs text-slate-400 line-through font-normal ml-1.5">Rp ${parseInt(currentBuyPricing.normalPrice).toLocaleString('id-ID')}</span>
+                <span class="ml-1.5 px-2 py-0.5 text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-md">Diskon Rp ${parseInt(targetDisc).toLocaleString('id-ID')}</span>
             `;
         } else {
-            document.getElementById('modalProductPrice').innerText = 'Rp ' + parseInt(productPrice).toLocaleString('id-ID');
+            document.getElementById('modalProductPrice').innerText = 'Rp ' + parseInt(targetPrice).toLocaleString('id-ID');
         }
+    }
+
+    // Open buy modal
+    function openBuyModal(productId, productName, normalPrice, hasSupplierCode, isClosed, priceQris, discQris, priceBalance, discBalance) {
+        currentBuyPricing = {
+            normalPrice: normalPrice,
+            priceQris: priceQris,
+            discQris: discQris,
+            priceBalance: priceBalance,
+            discBalance: discBalance
+        };
+
+        document.getElementById('formProductId').value = productId;
+        document.getElementById('modalProductTitle').innerText = productName;
+        updateModalPriceDisplay('qris');
         
         const targetPhoneContainer = document.getElementById('targetPhoneContainer');
         const targetPhoneInput = document.getElementById('target_phone');
@@ -445,8 +468,9 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    currentUserBalance = data.balance;
                     balanceText.innerText = data.formatted_balance;
-                    if (data.balance >= productPrice) {
+                    if (data.balance >= currentBuyPricing.priceBalance) {
                         if (balanceInput) {
                             balanceInput.disabled = false;
                             balanceLabel.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -478,6 +502,8 @@
         const submitBtn = document.getElementById('submitBtn');
 
         if (!qrisLabel || !balanceLabel) return;
+
+        updateModalPriceDisplay(method);
 
         if (method === 'qris') {
             qrisLabel.className = "relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border-2 border-blue-600 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition";
