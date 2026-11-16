@@ -242,6 +242,8 @@ class CatalogController extends Controller
                     return response()->json([
                         'success' => false,
                         'refunded' => true,
+                        'order_id' => $order->id,
+                        'reason' => $order->getBuyerSafeFailureReason(),
                         'message' => 'Transaksi gagal diproses oleh supplier OKEConnect. Saldo Anda telah dikembalikan otomatis ke akun.',
                     ], 422);
                 }
@@ -416,6 +418,7 @@ class CatalogController extends Controller
             'status' => $order->status,
             'sn' => $order->sn,
             'refunded' => $order->refunded_at !== null,
+            'reason' => in_array($order->status, ['gagal', 'failed']) ? $order->getBuyerSafeFailureReason() : null,
             'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses', 'proses']),
         ];
 

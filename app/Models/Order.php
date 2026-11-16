@@ -217,4 +217,21 @@ class Order extends Model
         $this->refresh();
         return $refunded;
     }
+
+    /**
+     * Format supplier response for buyer display without leaking internal H2H balance figures.
+     */
+    public function getBuyerSafeFailureReason(): string
+    {
+        $raw = trim((string) ($this->supplier_response ?? ''));
+        if ($raw === '') {
+            return 'Pesanan tidak dapat diproses oleh supplier.';
+        }
+
+        // Remove internal H2H balance info like "Saldo 267.994 @10:57" or "Saldo 508.744 - 62.350 = 446.394"
+        $cleaned = preg_replace('/\.?\s*Saldo\s+[\d\.,\s\-=@:]+.*$/i', '', $raw);
+        $cleaned = preg_replace('/^(?:T#\d+\s+)?(?:R#ORD-[A-Z0-9-]+\s+)?/i', '', trim((string) $cleaned));
+
+        return trim((string) $cleaned, " .") ?: 'Pesanan tidak dapat diproses oleh supplier.';
+    }
 }

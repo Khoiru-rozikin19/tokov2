@@ -209,6 +209,8 @@
                 <input type="hidden" id="formProductId" name="product_id">
                 <input type="hidden" id="email_or_whatsapp" name="email_or_whatsapp" value="{{ Auth::check() ? (Auth::user()->email ?: Auth::user()->phone) : '' }}">
 
+                <div id="purchaseInputError" class="hidden p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-xs font-bold text-rose-700 dark:text-rose-400"></div>
+
                 <div id="targetPhoneContainer" class="hidden">
                     <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>
                     <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="15" autocomplete="off" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
@@ -333,6 +335,47 @@
             <button onclick="closeModal()" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
                 Tutup & Coba Lagi
             </button>
+        </div>
+
+        <!-- TRANSACTION FAILED / AUTO-REFUND STATE -->
+        <div id="modalStepFailed" class="hidden text-center space-y-5 py-4">
+            <div class="w-24 h-24 rounded-full bg-rose-100 dark:bg-rose-950/40 flex items-center justify-center mx-auto">
+                <div class="w-16 h-16 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-rose-500/20">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+                    Transaksi Gagal
+                </span>
+                <h3 id="failedModalTitle" class="text-2xl font-black text-slate-800 dark:text-slate-100 pt-1">Pesanan Gagal Diproses</h3>
+                <p id="failedModalOrderId" class="hidden text-xs font-mono text-slate-400 dark:text-slate-500"></p>
+            </div>
+
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-left space-y-2.5">
+                <p id="failedModalMessage" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+                <div id="failedModalReasonWrap" class="hidden pt-2 border-t border-slate-200 dark:border-slate-800">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Keterangan Supplier:</span>
+                    <p id="failedModalReason" class="text-xs font-mono text-rose-600 dark:text-rose-400 break-words"></p>
+                </div>
+            </div>
+
+            <div id="failedModalRefundBadge" class="hidden p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center space-x-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <span>↩️</span>
+                <span>Saldo Anda telah dikembalikan otomatis ke akun.</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="retryFromFailedModal()" class="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-blue-500/20">
+                    Coba Lagi
+                </button>
+                <button type="button" onclick="closeModal()" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs sm:text-sm transition">
+                    Tutup
+                </button>
+            </div>
         </div>
 
     </div>
@@ -492,6 +535,12 @@
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.add('hidden');
         document.getElementById('modalStepExpired').classList.add('hidden');
+        document.getElementById('modalStepFailed').classList.add('hidden');
+        const inputErr = document.getElementById('purchaseInputError');
+        if (inputErr) {
+            inputErr.classList.add('hidden');
+            inputErr.innerText = '';
+        }
         
         document.getElementById('purchaseModal').classList.remove('hidden');
     }
@@ -602,10 +651,19 @@
         targetPhoneInput.value = normalizeTargetPhone(targetPhoneInput.value);
         const targetPhone = targetPhoneInput.value.trim();
         
+        const inputErr = document.getElementById('purchaseInputError');
+        if (inputErr) {
+            inputErr.classList.add('hidden');
+            inputErr.innerText = '';
+        }
+
         // Client-side validation for target_phone if visible
         if (!targetPhoneContainer.classList.contains('hidden')) {
             if (!/^[0-9]+$/.test(targetPhone) || targetPhone.length < 10 || targetPhone.length > 13) {
-                alert('Nomor HP Tujuan harus berupa angka dengan panjang 10-13 karakter!');
+                if (inputErr) {
+                    inputErr.innerText = 'Nomor HP Tujuan harus berupa angka dengan panjang 10-13 karakter!';
+                    inputErr.classList.remove('hidden');
+                }
                 return;
             }
         }
@@ -646,17 +704,26 @@
                     document.getElementById('modalStepInput').classList.add('hidden');
                     document.getElementById('modalStepSuccess').classList.remove('hidden');
                     populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id, data.order.status);
+                    if (data.order.status === 'proses') {
+                        activeOrderId = data.order.id;
+                        startPolling(false);
+                    }
                 } else {
                     renderPaymentInstructions(data.order);
                 }
             } else {
-                alert(data.message || 'Gagal memproses pesanan.');
+                showFailedRefundState(
+                    data.refunded === true,
+                    data.order_id || '',
+                    data.message || 'Gagal memproses pesanan.',
+                    data.reason || ''
+                );
             }
         })
         .catch(err => {
             submitBtn.disabled = false;
             submitBtn.innerHTML = defaultBtnHtml;
-            alert('Terjadi kesalahan koneksi server.');
+            showFailedRefundState(false, '', 'Terjadi kesalahan koneksi server. Silakan periksa riwayat pesanan Anda.', '');
             console.error(err);
         });
     }
@@ -724,7 +791,7 @@
     }
 
     // Polling logic
-    function startPolling() {
+    function startPolling(watchPayment = true) {
         if (pollInterval) clearInterval(pollInterval);
         
         pollInterval = setInterval(() => {
@@ -733,10 +800,23 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses' || data.status === 'proses') {
+                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
                     showSuccessState(data.vpn_config, data.success_instruction, data.status, data.sn);
+                } else if (data.status === 'proses') {
+                    if (watchPayment) {
+                        const processingOrderId = activeOrderId;
+                        document.getElementById('modalStepPayment').classList.add('hidden');
+                        document.getElementById('modalStepSuccess').classList.remove('hidden');
+                        populateSuccessDetails(data.vpn_config, data.success_instruction, processingOrderId, 'proses', data.sn);
+                        watchPayment = false;
+                    }
                 } else if (data.status === 'gagal' || data.status === 'failed') {
-                    showFailedRefundState(data.refunded);
+                    showFailedRefundState(
+                        data.refunded === true,
+                        activeOrderId,
+                        data.refunded ? 'Pesanan gagal diproses oleh supplier. Dana Anda telah dikembalikan otomatis ke Saldo Akun.' : 'Pesanan gagal diproses oleh supplier. Silakan hubungi Admin untuk bantuan.',
+                        data.reason || ''
+                    );
                 } else if (data.status === 'expired') {
                     showExpiredState();
                 } else if (data.status === 'ditolak' || data.status === 'rejected') {
@@ -747,33 +827,74 @@
         }, 4000); // Poll every 4 seconds
     }
 
-    function showFailedRefundState(refunded) {
-        const failedOrderId = activeOrderId;
+    function showFailedRefundState(refunded, orderId = '', message = '', reason = '') {
+        const failedOrderId = orderId || activeOrderId || '';
         resetOrderTracker();
+        document.getElementById('modalStepInput').classList.add('hidden');
         document.getElementById('modalStepPayment').classList.add('hidden');
-        document.getElementById('modalStepSuccess').classList.remove('hidden');
+        document.getElementById('modalStepSuccess').classList.add('hidden');
+        document.getElementById('modalStepExpired').classList.add('hidden');
+        document.getElementById('modalStepFailed').classList.remove('hidden');
 
-        const container = document.getElementById('successDetailsContainer');
-        const headerDefault = document.getElementById('successHeaderDefault');
-        if (headerDefault) headerDefault.classList.add('hidden');
-        if (container) {
-            container.className = "text-center space-y-5 py-2 text-slate-800 dark:text-slate-200";
-            container.innerHTML = `
-                <div class="pt-2">
-                    <div class="w-20 h-20 bg-rose-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-rose-500/20">
-                        <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="space-y-1.5">
-                    <h3 class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">Transaksi Gagal di Supplier</h3>
-                    <p class="text-xs font-mono text-slate-400 dark:text-slate-500">Order ID: ${escapeHtml(failedOrderId || '')}</p>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">
-                        ${refunded ? 'Produk gagal diproses oleh supplier. Dana Anda telah dikembalikan otomatis ke Saldo Akun.' : 'Produk gagal diproses oleh supplier. Silakan hubungi Admin untuk bantuan.'}
-                    </p>
-                </div>
-            `;
+        const titleEl = document.getElementById('failedModalTitle');
+        const orderEl = document.getElementById('failedModalOrderId');
+        const msgEl = document.getElementById('failedModalMessage');
+        const reasonWrap = document.getElementById('failedModalReasonWrap');
+        const reasonEl = document.getElementById('failedModalReason');
+        const refundBadge = document.getElementById('failedModalRefundBadge');
+
+        if (titleEl) {
+            titleEl.innerText = refunded ? 'Transaksi Gagal & Dana Dikembalikan' : 'Transaksi Gagal Diproses';
+        }
+        if (orderEl) {
+            if (failedOrderId) {
+                orderEl.innerText = 'Order ID: ' + failedOrderId;
+                orderEl.classList.remove('hidden');
+            } else {
+                orderEl.classList.add('hidden');
+            }
+        }
+        if (msgEl) {
+            msgEl.innerText = message || 'Pesanan tidak dapat diproses oleh supplier.';
+        }
+        if (reasonWrap && reasonEl) {
+            if (reason && reason.trim() !== '') {
+                reasonEl.innerText = reason;
+                reasonWrap.classList.remove('hidden');
+            } else {
+                reasonWrap.classList.add('hidden');
+            }
+        }
+        if (refundBadge) {
+            if (refunded) {
+                refundBadge.classList.remove('hidden');
+            } else {
+                refundBadge.classList.add('hidden');
+            }
+        }
+    }
+
+    function retryFromFailedModal() {
+        document.getElementById('modalStepFailed').classList.add('hidden');
+        document.getElementById('modalStepInput').classList.remove('hidden');
+        // Refresh saldo user agar tampil terbaru pasca auto-refund
+        const balanceText = document.getElementById('checkoutUserBalanceText');
+        const balanceInput = document.querySelector('input[name="payment_method"][value="balance"]');
+        const balanceLabel = document.getElementById('payMethodBalanceLabel');
+        if (balanceText && currentBuyPricing) {
+            fetch('/api/balance')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentUserBalance = data.balance;
+                        balanceText.innerText = data.formatted_balance;
+                        if (balanceInput && balanceLabel && data.balance >= currentBuyPricing.priceBalance) {
+                            balanceInput.disabled = false;
+                            balanceLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                })
+                .catch(() => {});
         }
     }
 
@@ -810,23 +931,45 @@
                 headerDefault.classList.add('hidden');
             }
             container.className = "text-center space-y-5 py-2 text-slate-800 dark:text-slate-200";
-            let html = `
-                <div class="pt-2">
-                    <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-100 dark:ring-emerald-950/50">
-                        <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                        </svg>
+
+            const isProcessing = (orderStatus === 'proses');
+            const iconHtml = isProcessing
+                ? `
+                    <div class="w-24 h-24 rounded-full bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center mx-auto">
+                        <div class="w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20">
+                            <svg class="w-9 h-9 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3.5"></circle>
+                                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="space-y-1.5">
-                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">${orderStatus === 'proses' ? 'Pesanan Sedang Diproses' : 'Pembayaran Berhasil!'}</h3>
+                `
+                : `
+                    <div class="pt-2">
+                        <div class="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30 ring-8 ring-emerald-100 dark:ring-emerald-950/50">
+                            <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+
+            let html = `
+                <div class="pt-2">${iconHtml}</div>
+                <div class="space-y-2">
+                    <div>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold ${isProcessing ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50'}">
+                            ${isProcessing ? '⏳ Sedang Diproses Supplier' : '✅ Transaksi Selesai'}
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">${isProcessing ? 'Pesanan Sedang Diproses' : 'Transaksi Berhasil!'}</h3>
                     <p class="text-xs font-mono text-slate-400 dark:text-slate-500">Order ID: ${escapeHtml(orderId || '')}</p>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">
-                        ${orderStatus === 'proses'
-                            ? 'Pembayaran diterima dan pesanan sedang diproses oleh supplier. Cek status & SN di menu Riwayat Pesanan.'
-                            : 'Pembayaran Anda telah terverifikasi dan pesanan telah diproses.'}
+                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1 leading-relaxed">
+                        ${isProcessing
+                            ? 'Pembayaran Anda sudah diterima dan pesanan sedang diproses ke supplier. Status akan diperbarui otomatis (atau cek di Riwayat Pesanan).'
+                            : 'Pembayaran terverifikasi dan pesanan Anda telah sukses diproses oleh sistem.'}
                     </p>
-                    ${sn ? `<p class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 pt-1">SN: ${escapeHtml(sn)}</p>` : ''}
+                    ${sn ? `<div class="mt-2 inline-block px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 select-all">SN: ${escapeHtml(sn)}</div>` : ''}
                 </div>
             `;
 
@@ -835,6 +978,16 @@
                     <div class="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-left">
                         <span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold block uppercase tracking-wider mb-1">Informasi Pesanan:</span>
                         <div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                    </div>
+                `;
+            }
+
+            if (isProcessing) {
+                html += `
+                    <div class="pt-1">
+                        <a href="{{ route('orders.history') }}" class="inline-flex items-center justify-center px-5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition">
+                            📋 Pantau di Riwayat Pesanan
+                        </a>
                     </div>
                 `;
             }
