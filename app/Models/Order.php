@@ -30,6 +30,7 @@ class Order extends Model
         'qris_payload',
         'vpn_config',
         'sn',
+        'supplier_response',
         'commission_earned',
         'telegram_message_id',
         'expired_at',
@@ -37,6 +38,7 @@ class Order extends Model
         'escrow_amount',
         'escrow_released_at',
         'paid_at',
+        'refunded_at',
     ];
 
     protected $casts = [
@@ -44,6 +46,7 @@ class Order extends Model
         'commission_earned' => 'decimal:2',
         'escrow_released_at' => 'datetime',
         'paid_at' => 'datetime',
+        'refunded_at' => 'datetime',
         'is_preorder' => 'boolean',
     ];
 
@@ -132,5 +135,86 @@ class Order extends Model
             $this->escrow_status = 'none';
             $this->save();
         }
+    }
+
+    /**
+     * Atomically mark a failed order and refund its total_amount to the user's balance (idempotent).
+     *
+     * @return bool True if user balance was credited, false if already refunded or guest order.
+     */
+    public function refundToBuyer(string $reason = '', string $failedStatus = 'gagal'): bool
+    {
+        $refunded = \Illuminate\Support\Facades\DB::transaction(function () use ($reason, $failedStatus) {
+            $locked = self::where('id', $this->id)->lockForUpdate()->first();
+            if (!$locked) {
+                return false;
+            }
+
+            $locked->status = $failedStatus;
+            $locked->is_preorder = false;
+            if ($reason !== '') {
+                $locked->supplier_response = $reason;
+            }
+
+            // Deduct held balance from seller if applicable
+            if (in_array($locked->escrow_status, ['held', 'disputed'])) {
+                $sellerId = $locked->product ? $locked->product->user_id : null;
+                if ($sellerId) {
+                    $sellerBalance = UserBalance::where('user_id', $sellerId)->lockForUpdate()->first();
+                    if ($sellerBalance) {
+                        $newHeld = max(0, $sellerBalance->held_balance - (float) $locked->escrow_amount);
+                        $sellerBalance->update(['held_balance' => $newHeld]);
+                    }
+                }
+                $locked->escrow_status = 'none';
+            }
+
+            // Prevent duplicate refunds
+            $alreadyRefunded = $locked->refunded_at !== null || BalanceTransaction::where('reference_id', $locked->id)
+                ->where('description', 'like', 'Refund%')
+                ->exists();
+
+            $didRefundBalance = false;
+            if (!$alreadyRefunded && $locked->user_id && (int) $locked->total_amount > 0) {
+                $buyer = User::find($locked->user_id);
+                if ($buyer) {
+                    $buyerBalance = UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                    if (!$buyerBalance) {
+                        $buyerBalance = $buyer->getOrCreateBalance();
+                        $buyerBalance = UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                    }
+
+                    $balanceBefore = $buyerBalance->balance;
+                    $buyerBalance->increment('balance', (int) $locked->total_amount);
+                    $buyerBalance->refresh();
+
+                    $productLabel = $locked->product ? $locked->product->name : 'Produk H2H';
+                    $desc = "Refund pesanan gagal ({$locked->id}): {$productLabel}";
+                    if ($reason !== '') {
+                        $desc .= ' — ' . \Illuminate\Support\Str::limit($reason, 120);
+                    }
+
+                    BalanceTransaction::create([
+                        'user_id' => $buyer->id,
+                        'type' => 'topup',
+                        'amount' => (int) $locked->total_amount,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $buyerBalance->balance,
+                        'description' => $desc,
+                        'reference_id' => $locked->id,
+                        'status' => 'success',
+                    ]);
+
+                    $locked->refunded_at = now();
+                    $didRefundBalance = true;
+                }
+            }
+
+            $locked->save();
+            return $didRefundBalance;
+        });
+
+        $this->refresh();
+        return $refunded;
     }
 }

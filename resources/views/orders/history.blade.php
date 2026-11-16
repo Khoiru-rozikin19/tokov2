@@ -82,6 +82,15 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
                                         Pending
                                     </span>
+                                @elseif(in_array($order->status, ['gagal', 'failed']))
+                                    <div class="flex flex-col space-y-1">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 w-fit">
+                                            Gagal
+                                        </span>
+                                        @if($order->refunded_at)
+                                            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">↩️ Dana Di-refund ke Saldo</span>
+                                        @endif
+                                    </div>
                                 @elseif(in_array($order->status, ['rejected', 'ditolak']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                         Ditolak
@@ -265,6 +274,15 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
                                         Pending
                                     </span>
+                                @elseif(in_array($order->status, ['gagal', 'failed']))
+                                    <div class="flex flex-col items-end space-y-0.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
+                                            Gagal
+                                        </span>
+                                        @if($order->refunded_at)
+                                            <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">↩️ Dana Di-refund</span>
+                                        @endif
+                                    </div>
                                 @elseif(in_array($order->status, ['rejected', 'ditolak']))
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                         Ditolak

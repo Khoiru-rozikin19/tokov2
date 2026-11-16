@@ -318,8 +318,9 @@ class TelegramWebhookController extends Controller
                     app(\App\Services\VpsSshService::class)->createVpnAccount($order);
                 }
 
-                // Update order status to paid
-                $order->status = $order->is_preorder ? 'proses' : 'sukses';
+                // Update order status to paid (H2H stays 'proses' until OKEConnect confirms)
+                $isH2H = $order->product && !empty($order->product->orderkuota_product_code);
+                $order->status = ($order->is_preorder || $isH2H) ? 'proses' : 'sukses';
                 $order->save();
                 $order->processEscrowAndNotification();
 
@@ -339,6 +340,7 @@ class TelegramWebhookController extends Controller
                 // Run the pulsa transaction
                 if (!$order->is_preorder) {
                     $this->orderkuotaService->prosesTransaksiPulsa($order->id);
+                    $order->refresh();
                 }
 
                 // Acknowledge Telegram callback query
@@ -355,6 +357,18 @@ class TelegramWebhookController extends Controller
                                      . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                      . "👤 *Pelanggan:* {$customerName}\n\n"
                                      . "Status pre-order telah diubah menjadi *PROSES* dan akan dikirim ke supplier otomatis ketika status produk open.";
+                    } elseif (in_array($order->status, ['gagal', 'failed'])) {
+                        $updatedText = "❌ *Transaksi Disetujui - H2H Gagal (Auto-Refund)*\n\n"
+                                     . "📦 *ID Order:* `{$orderId}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "OKEConnect menolak transaksi dan dana telah dikembalikan otomatis ke saldo pembeli.";
+                    } elseif ($order->status === 'proses') {
+                        $updatedText = "⏳ *Transaksi Disetujui - Diproses H2H*\n\n"
+                                     . "📦 *ID Order:* `{$orderId}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "Status transaksi sedang *PROSES* di OKEConnect (menunggu callback konfirmasi).";
                     } else {
                         $updatedText = "✅ *Transaksi Sukses*\n\n"
                                      . "📦 *ID Order:* `{$orderId}`\n"
@@ -372,7 +386,7 @@ class TelegramWebhookController extends Controller
                             'preorder_received',
                             \App\Services\WhatsappService::formatPreorderMessage($order, false)
                         );
-                    } else {
+                    } elseif (in_array($order->status, ['success', 'paid', 'sukses'])) {
                         $waService->sendAutomatedNotification(
                             'order_success',
                             \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'ACC Admin')

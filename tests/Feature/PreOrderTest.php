@@ -282,9 +282,9 @@ test('admin can cancel pre-order from Telegram webhook which refunds balance and
     });
 });
 
-test('syncing Okeconnect product status to open dispatches pending pre-orders, updates status to sukses, and removes Telegram buttons', function () {
+test('syncing Okeconnect product status to open dispatches pending pre-orders, keeps status as proses when queued by Okeconnect, and removes Telegram buttons', function () {
     Http::fake([
-        'h2h.okeconnect.com/*' => Http::response('PROSES', 200),
+        'h2h.okeconnect.com/*' => Http::response('T#123 R#ORD-PRE-SYNC akan diproses. Saldo 50000 - 10000 = 40000', 200),
         'api.telegram.org/*' => Http::response(['ok' => true], 200),
     ]);
 
@@ -317,7 +317,7 @@ test('syncing Okeconnect product status to open dispatches pending pre-orders, u
     app(OrderkuotaService::class)->processAllOpenPreorders();
 
     $order->refresh();
-    expect($order->status)->toBe('sukses');
+    expect($order->status)->toBe('proses');
     expect($order->is_preorder)->toBeFalse();
 
     // Verify Telegram message was edited to "Pre-Order Berhasil"

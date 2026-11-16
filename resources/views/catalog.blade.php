@@ -645,7 +645,7 @@
                 if (data.payment_method === 'balance') {
                     document.getElementById('modalStepInput').classList.add('hidden');
                     document.getElementById('modalStepSuccess').classList.remove('hidden');
-                    populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id);
+                    populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id, data.order.status);
                 } else {
                     renderPaymentInstructions(data.order);
                 }
@@ -734,7 +734,9 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses' || data.status === 'proses') {
-                    showSuccessState(data.vpn_config, data.success_instruction);
+                    showSuccessState(data.vpn_config, data.success_instruction, data.status, data.sn);
+                } else if (data.status === 'gagal' || data.status === 'failed') {
+                    showFailedRefundState(data.refunded);
                 } else if (data.status === 'expired') {
                     showExpiredState();
                 } else if (data.status === 'ditolak' || data.status === 'rejected') {
@@ -745,16 +747,46 @@
         }, 4000); // Poll every 4 seconds
     }
 
-    function showSuccessState(vpnConfig, successInstruction) {
+    function showFailedRefundState(refunded) {
+        const failedOrderId = activeOrderId;
+        resetOrderTracker();
+        document.getElementById('modalStepPayment').classList.add('hidden');
+        document.getElementById('modalStepSuccess').classList.remove('hidden');
+
+        const container = document.getElementById('successDetailsContainer');
+        const headerDefault = document.getElementById('successHeaderDefault');
+        if (headerDefault) headerDefault.classList.add('hidden');
+        if (container) {
+            container.className = "text-center space-y-5 py-2 text-slate-800 dark:text-slate-200";
+            container.innerHTML = `
+                <div class="pt-2">
+                    <div class="w-20 h-20 bg-rose-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-rose-500/20">
+                        <svg class="w-11 h-11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <h3 class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">Transaksi Gagal di Supplier</h3>
+                    <p class="text-xs font-mono text-slate-400 dark:text-slate-500">Order ID: ${escapeHtml(failedOrderId || '')}</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">
+                        ${refunded ? 'Produk gagal diproses oleh supplier. Dana Anda telah dikembalikan otomatis ke Saldo Akun.' : 'Produk gagal diproses oleh supplier. Silakan hubungi Admin untuk bantuan.'}
+                    </p>
+                </div>
+            `;
+        }
+    }
+
+    function showSuccessState(vpnConfig, successInstruction, orderStatus = 'sukses', sn = '') {
         const completedOrderId = activeOrderId;
         resetOrderTracker();
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.remove('hidden');
         
-        populateSuccessDetails(vpnConfig, successInstruction, completedOrderId);
+        populateSuccessDetails(vpnConfig, successInstruction, completedOrderId, orderStatus, sn);
     }
 
-    function populateSuccessDetails(config, successInstruction, orderId) {
+    function populateSuccessDetails(config, successInstruction, orderId, orderStatus = 'sukses', sn = '') {
         const container = document.getElementById('successDetailsContainer');
         if (!container) return;
         
@@ -787,9 +819,14 @@
                     </div>
                 </div>
                 <div class="space-y-1.5">
-                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Pembayaran Berhasil!</h3>
+                    <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">${orderStatus === 'proses' ? 'Pesanan Sedang Diproses' : 'Pembayaran Berhasil!'}</h3>
                     <p class="text-xs font-mono text-slate-400 dark:text-slate-500">Order ID: ${escapeHtml(orderId || '')}</p>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">Pembayaran Anda telah terverifikasi dan pesanan sedang diproses otomatis.</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 pt-1">
+                        ${orderStatus === 'proses'
+                            ? 'Pembayaran diterima dan pesanan sedang diproses oleh supplier. Cek status & SN di menu Riwayat Pesanan.'
+                            : 'Pembayaran Anda telah terverifikasi dan pesanan telah diproses.'}
+                    </p>
+                    ${sn ? `<p class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 pt-1">SN: ${escapeHtml(sn)}</p>` : ''}
                 </div>
             `;
 

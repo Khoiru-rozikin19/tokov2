@@ -9,10 +9,13 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">Riwayat pesanan pelanggan dan log mutasi masuk</p>
         </div>
         
-        <!-- Filters -->
+    <!-- Filters -->
         <div class="mt-4 md:mt-0 flex flex-wrap gap-2">
             <a href="{{ route('admin.transactions') }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ !$status ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
                 Semua
+            </a>
+            <a href="{{ route('admin.transactions', ['status' => 'proses']) }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ $status === 'proses' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
+                Proses
             </a>
             <a href="{{ route('admin.transactions', ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ $status === 'pending' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
                 Pending
@@ -20,11 +23,25 @@
             <a href="{{ route('admin.transactions', ['status' => 'success']) }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ $status === 'success' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
                 Sukses
             </a>
+            <a href="{{ route('admin.transactions', ['status' => 'gagal']) }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ in_array($status, ['gagal', 'failed']) ? 'bg-rose-600 text-white shadow-md shadow-rose-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
+                Gagal
+            </a>
             <a href="{{ route('admin.transactions', ['status' => 'expired']) }}" class="px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 {{ $status === 'expired' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50' }}">
                 Expired
             </a>
         </div>
     </div>
+
+    @if(session('success'))
+        <div class="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+            🎉 {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-rose-700 dark:text-rose-400 text-xs font-bold">
+            ❌ {{ session('error') }}
+        </div>
+    @endif
 
     <!-- Orders/Transactions Table -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
@@ -47,6 +64,9 @@
                         <th class="py-4.5 px-6">Modal & Laba</th>
                         <th class="py-4.5 px-6">Status</th>
                         <th class="py-4.5 px-6">Dibuat Pada</th>
+                        @if(auth()->user()->role === 'admin')
+                            <th class="py-4.5 px-6 text-center">Aksi H2H</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
@@ -55,8 +75,17 @@
                             <td class="py-4.5 px-6 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
                                 {{ $order->id }}
                             </td>
-                            <td class="py-4.5 px-6 font-bold text-slate-800 dark:text-slate-200">
-                                {{ $order->product->name ?? 'Produk Dihapus' }}
+                            <td class="py-4.5 px-6">
+                                <div class="font-bold text-slate-800 dark:text-slate-200">{{ $order->product->name ?? 'Produk Dihapus' }}</div>
+                                @if($order->target_phone)
+                                    <div class="text-[11px] text-slate-400">Tujuan: {{ $order->target_phone }}</div>
+                                @endif
+                                @if($order->sn)
+                                    <div class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">SN: {{ $order->sn }}</div>
+                                @endif
+                                @if($order->supplier_response)
+                                    <div class="text-[10px] text-slate-400 max-w-xs truncate" title="{{ $order->supplier_response }}">{{ \Illuminate\Support\Str::limit($order->supplier_response, 55) }}</div>
+                                @endif
                             </td>
                             @if(auth()->user()->role === 'admin')
                                 <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
@@ -100,6 +129,15 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
                                         Pending
                                     </span>
+                                @elseif(in_array($order->status, ['gagal', 'failed']))
+                                    <div class="flex flex-col space-y-1">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 w-fit">
+                                            Gagal
+                                        </span>
+                                        @if($order->refunded_at)
+                                            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">↩️ Sudah Refund</span>
+                                        @endif
+                                    </div>
                                 @elseif(in_array($order->status, ['rejected', 'ditolak']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                         Ditolak
@@ -115,10 +153,35 @@
                                 @endif
                             </td>
                             <td class="py-4.5 px-6 text-xs text-slate-400">{{ $order->created_at->format('d/m/Y H:i') }}</td>
+                            @if(auth()->user()->role === 'admin')
+                                <td class="py-4.5 px-6 text-center">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        @if(in_array($order->status, ['proses', 'pending', 'pending_manual']))
+                                            <form action="{{ route('admin.transactions.mark_success', $order->id) }}" method="POST" onsubmit="var s = prompt('Masukkan SN / keterangan sukses (opsional):'); if (s === null) return false; this.querySelector('input[name=sn]').value = s; return true;">
+                                                @csrf
+                                                <input type="hidden" name="sn" value="">
+                                                <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold transition whitespace-nowrap" title="Tandai transaksi sukses">
+                                                    ✅ Sukses
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if(in_array($order->status, ['proses', 'sukses', 'success', 'paid']) && !$order->refunded_at)
+                                            <form action="{{ route('admin.transactions.mark_failed_refund', $order->id) }}" method="POST" onsubmit="if (!confirm('Tandai pesanan {{ $order->id }} sebagai GAGAL dan refund otomatis saldo pembeli?')) return false; var r = prompt('Alasan gagal (opsional):', 'Transaksi gagal di OKEConnect'); if (r === null) return false; this.querySelector('input[name=reason]').value = r; return true;">
+                                                @csrf
+                                                <input type="hidden" name="reason" value="">
+                                                <button type="submit" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-[11px] font-bold transition whitespace-nowrap" title="Tandai gagal dan refund saldo pembeli">
+                                                    ↩️ Gagal & Refund
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-10 text-center text-slate-400">
+                            <td colspan="{{ auth()->user()->role === 'admin' ? 11 : 10 }}" class="py-10 text-center text-slate-400">
                                 Tidak ada transaksi yang cocok dengan filter ini.
                             </td>
                         </tr>

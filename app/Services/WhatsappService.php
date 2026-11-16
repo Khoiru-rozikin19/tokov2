@@ -315,6 +315,22 @@ class WhatsappService
                            . "⏰ *Waktu:* 06:30:00\n\n"
                            . "ℹ️ _Pesan otomatis sistem RZK Store._",
             ],
+            [
+                'key' => 'h2h_order_failed',
+                'title' => 'Peringatan Transaksi H2H OKEConnect Gagal & Auto-Refund',
+                'badge' => 'Peringatan H2H',
+                'trigger' => 'Dikirim otomatis saat order H2H gagal diproses oleh OKEConnect (langsung maupun lewat callback) dan dana user di-refund otomatis.',
+                'default_admin' => '1',
+                'default_group' => '0',
+                'preview' => "🚨 *TRANSAKSI H2H GAGAL (AUTO-REFUND)*\n"
+                           . "📦 *ID Order:* ORD-XXXXXXXX\n"
+                           . "🛍️ *Produk:* XL 15GB V1\n"
+                           . "📱 *No Tujuan:* 0878xxxxxxxx\n"
+                           . "💰 *Nominal:* Rp 18.000\n"
+                           . "❌ *Keterangan Supplier:* GAGAL Produk sedang gangguan\n"
+                           . "↩️ *Status Dana:* Saldo otomatis dikembalikan ke akun pembeli\n\n"
+                           . "ℹ️ _Pesan otomatis sistem RZK Store._",
+            ],
         ];
     }
 
@@ -440,6 +456,29 @@ class WhatsappService
              . "👤 *Nama:* {$user->name}\n"
              . "📧 *Email:* {$user->email}\n"
              . "📱 *WhatsApp:* {$user->phone}\n\n"
+             . "ℹ️ _Pesan otomatis sistem RZK Store._";
+    }
+
+    /**
+     * Format automated WhatsApp message for failed H2H order & refund status.
+     */
+    public static function formatH2HFailureMessage(\App\Models\Order $order, string $reason, bool $didRefund): string
+    {
+        $productName = $order->product ? $order->product->name : 'Produk H2H';
+        $amountFmt = 'Rp ' . number_format((int) $order->total_amount, 0, ',', '.');
+        $targetPhone = $order->target_phone ?: '-';
+        $refundStatus = $didRefund
+            ? 'Saldo otomatis dikembalikan ke akun pembeli'
+            : ($order->user_id ? 'Sudah pernah di-refund sebelumnya / cek manual' : 'Order Guest (tidak punya akun) — butuh refund manual!');
+
+        return "🚨 *TRANSAKSI H2H GAGAL*\n"
+             . "📦 *ID Order:* {$order->id}\n"
+             . "🛍️ *Produk:* {$productName}\n"
+             . "📱 *No Tujuan:* {$targetPhone}\n"
+             . "💰 *Nominal:* {$amountFmt}\n"
+             . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n"
+             . "❌ *Respon Supplier:* {$reason}\n"
+             . "↩️ *Status Dana:* {$refundStatus}\n\n"
              . "ℹ️ _Pesan otomatis sistem RZK Store._";
     }
 

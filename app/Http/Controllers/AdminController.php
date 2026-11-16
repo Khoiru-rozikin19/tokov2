@@ -572,6 +572,8 @@ class AdminController extends Controller
                 $query->whereIn('status', ['pending', 'pending_manual']);
             } elseif ($status === 'success') {
                 $query->whereIn('status', ['success', 'paid', 'sukses']);
+            } elseif ($status === 'failed' || $status === 'gagal') {
+                $query->whereIn('status', ['failed', 'gagal']);
             } elseif ($status === 'rejected') {
                 $query->whereIn('status', ['rejected', 'ditolak']);
             } else {
@@ -595,6 +597,8 @@ class AdminController extends Controller
                     $topupQuery->whereIn('status', ['pending', 'pending_manual']);
                 } elseif ($status === 'success') {
                     $topupQuery->whereIn('status', ['success', 'paid', 'sukses']);
+                } elseif ($status === 'failed' || $status === 'gagal') {
+                    $topupQuery->whereIn('status', ['failed', 'gagal']);
                 } elseif ($status === 'rejected') {
                     $topupQuery->whereIn('status', ['rejected', 'ditolak']);
                 } else {
@@ -653,8 +657,10 @@ class AdminController extends Controller
         $pin = Setting::get('orderkuota_pin', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
         $priceListId = Setting::get('orderkuota_price_list_id', '905ccd028329b0a');
+        $webhookSecret = Setting::get('orderkuota_webhook_secret', '');
+        $callbackUrl = route('api.callback.okeconnect');
 
-        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode', 'priceListId'));
+        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode', 'priceListId', 'webhookSecret', 'callbackUrl'));
     }
 
     /**
@@ -668,6 +674,7 @@ class AdminController extends Controller
             'orderkuota_pin' => 'nullable|string|max:10',
             'orderkuota_mode' => 'required|in:sandbox,production',
             'orderkuota_price_list_id' => 'nullable|string|max:255',
+            'orderkuota_webhook_secret' => 'nullable|string|max:255',
         ]);
 
         Setting::set('orderkuota_member_id', $request->orderkuota_member_id);
@@ -675,8 +682,64 @@ class AdminController extends Controller
         Setting::set('orderkuota_pin', $request->orderkuota_pin);
         Setting::set('orderkuota_mode', $request->orderkuota_mode);
         Setting::set('orderkuota_price_list_id', $request->orderkuota_price_list_id);
+        Setting::set('orderkuota_webhook_secret', trim((string) $request->orderkuota_webhook_secret));
 
         return redirect()->route('admin.supplier_settings')->with('success', 'Pengaturan API Supplier berhasil diperbarui.');
+    }
+
+    /**
+     * Manually mark an H2H/processing transaction as SUKSES (with optional SN).
+     */
+    public function markTransactionSuccess(Request $request, $id)
+    {
+        $order = Order::with('product')->findOrFail($id);
+        if (in_array($order->status, ['gagal', 'failed']) && $order->refunded_at !== null) {
+            return redirect()->back()->with('error', 'Pesanan ini sudah gagal dan saldonya telah di-refund ke pembeli.');
+        }
+
+        $sn = trim((string) $request->input('sn', ''));
+        $updateData = [
+            'status' => 'sukses',
+            'is_preorder' => false,
+        ];
+        if ($sn !== '') {
+            $updateData['sn'] = $sn;
+        }
+        $order->update($updateData);
+
+        if (!app()->runningUnitTests()) {
+            try {
+                app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
+                    'order_success',
+                    \App\Services\WhatsappService::formatOrderSuccessMessage($order->fresh('product'), 'Konfirmasi Admin')
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("markTransactionSuccess WA error: " . $e->getMessage());
+            }
+        }
+
+        return redirect()->back()->with('success', "Transaksi {$order->id} berhasil ditandai sebagai SUKSES.");
+    }
+
+    /**
+     * Manually mark a failed supplier order as GAGAL and auto-refund buyer balance.
+     */
+    public function markTransactionFailedAndRefund(Request $request, $id)
+    {
+        $order = Order::with('product')->findOrFail($id);
+        $reason = trim((string) $request->input('reason', 'Dinyatakan gagal di OKEConnect oleh Admin'));
+
+        $didRefund = $order->refundToBuyer($reason, 'gagal');
+
+        if ($didRefund) {
+            return redirect()->back()->with('success', "Transaksi {$order->id} ditandai GAGAL dan dana Rp " . number_format($order->total_amount, 0, ',', '.') . " telah dikembalikan ke saldo akun pembeli.");
+        }
+
+        if ($order->user_id && $order->refunded_at !== null) {
+            return redirect()->back()->with('success', "Transaksi {$order->id} ditandai GAGAL (refund sudah pernah tercatat sebelumnya).");
+        }
+
+        return redirect()->back()->with('success', "Transaksi {$order->id} ditandai GAGAL (pesanan guest tanpa akun — harap refund manual jika pembayaran sudah masuk).");
     }
 
     /**

@@ -8,6 +8,30 @@
         <p class="text-sm text-slate-500 dark:text-slate-400">Konfigurasikan kredensial H2H Orderkuota.com Anda untuk otomatisasi produk</p>
     </div>
 
+    <!-- Callback / Webhook URL Guide -->
+    <div class="bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-3xl p-5 sm:p-6 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-extrabold text-blue-800 dark:text-blue-300 flex items-center space-x-2">
+                    <span>🔗</span>
+                    <span>URL Callback / Report H2H OKEConnect (Wajib Dipasang)</span>
+                </h3>
+                <p class="text-xs text-blue-700/90 dark:text-blue-300/80 mt-1 leading-relaxed">
+                    Pasang URL di bawah ini pada pengaturan <strong>Callback / Webhook H2H</strong> di member area OKEConnect agar status transaksi (<strong>Sukses + SN</strong> atau <strong>Gagal + Auto-Refund Saldo</strong>) otomatis sinkron dengan website:
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input type="text" id="okeconnect_callback_url" readonly value="{{ $callbackUrl }}" class="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-mono font-bold text-slate-800 dark:text-slate-100 select-all">
+            <button type="button" onclick="copyCallbackUrl()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap">
+                📋 <span id="copyCallbackBtnText">Salin URL Callback</span>
+            </button>
+        </div>
+        <p class="text-[11px] text-blue-600 dark:text-blue-400">
+            Mendukung metode HTTP <strong>GET</strong> dan <strong>POST</strong>. Jika OKEConnect gagal memproses order, saldo akun pembeli otomatis di-refund dan Admin menerima notifikasi.
+        </p>
+    </div>
+
     <!-- Configuration Form -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 sm:p-8 shadow-sm">
         
@@ -50,6 +74,15 @@
                 </p>
             </div>
 
+            <!-- Webhook Secret (Opsional) -->
+            <div class="space-y-2">
+                <label for="orderkuota_webhook_secret" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Webhook Key / Secret Callback (Opsional)</label>
+                <input type="text" id="orderkuota_webhook_secret" name="orderkuota_webhook_secret" value="{{ $webhookSecret ?? '' }}" placeholder="Kosongkan jika tidak menggunakan key di OKEConnect..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <p class="text-[11px] text-slate-450 dark:text-slate-500 leading-relaxed">
+                    Jika Anda mengisi Secret Key ini, callback dari OKEConnect wajib mengirim parameter <code>?key=...</code> yang cocok. Biarkan kosong apabila URL Callback OKEConnect Anda tidak memakai parameter <code>key</code>.
+                </p>
+            </div>
+
             <!-- Status Mode (Sandbox / Production Toggle) -->
             <div class="space-y-2">
                 <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Mode Transaksi API</label>
@@ -82,4 +115,18 @@
 
     </div>
 </div>
+
+<script>
+    function copyCallbackUrl() {
+        const input = document.getElementById('okeconnect_callback_url');
+        const label = document.getElementById('copyCallbackBtnText');
+        if (!input) return;
+        navigator.clipboard.writeText(input.value).then(() => {
+            if (label) {
+                label.textContent = 'Tersalin!';
+                setTimeout(() => { label.textContent = 'Salin URL Callback'; }, 2000);
+            }
+        });
+    }
+</script>
 @endsection

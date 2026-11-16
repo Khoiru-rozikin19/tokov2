@@ -13,7 +13,7 @@ use App\Http\Controllers\XlToolController;
 
 // API Callback (public - no auth required)
 Route::post('/api/v1/payment/callback-notification', [PaymentCallbackController::class, 'handle'])->name('api.payment.callback');
-Route::post('/api/callback/okeconnect', [App\Http\Controllers\OkeconnectCallbackController::class, 'handle'])->name('api.callback.okeconnect');
+Route::match(['get', 'post'], '/api/callback/okeconnect', [App\Http\Controllers\OkeconnectCallbackController::class, 'handle'])->name('api.callback.okeconnect');
 Route::post('/webhook/telegram', [App\Http\Controllers\TelegramWebhookController::class, 'handle'])->name('webhook.telegram');
 
 // Guest Auth Routes
@@ -105,6 +105,8 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::get('/supplier-settings', [AdminController::class, 'supplierSettings'])->name('supplier_settings');
         Route::post('/supplier-settings', [AdminController::class, 'updateSupplierSettings'])->name('supplier_settings.update');
         Route::post('/products/sync-okeconnect', [AdminController::class, 'syncOkeconnectProducts'])->name('products.sync_okeconnect');
+        Route::post('/transactions/{id}/mark-success', [AdminController::class, 'markTransactionSuccess'])->name('transactions.mark_success');
+        Route::post('/transactions/{id}/mark-failed-refund', [AdminController::class, 'markTransactionFailedAndRefund'])->name('transactions.mark_failed_refund');
         
         // Manajemen User (Persetujuan Pendaftaran & Upgrade Seller & Kelola Akun)
         Route::get('/users', [AdminController::class, 'userManagement'])->name('users');

@@ -471,6 +471,119 @@ test('okeconnect callback route updates status to failed on failure report', fun
     expect($order->status)->toBe('failed');
 });
 
+test('okeconnect GET callback parses report message, marks gagal, and auto-refunds buyer balance idempotently', function () {
+    $buyer = User::create([
+        'name' => 'H2H Buyer',
+        'email' => 'h2hbuyer@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+    $balance = $buyer->getOrCreateBalance();
+    $balance->update(['balance' => 5000]);
+
+    $product = Product::create([
+        'name' => 'XL Data 15GB',
+        'price' => 15000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'XDCF3',
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-GETFAIL1',
+        'user_id' => $buyer->id,
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'h2hbuyer@example.com',
+        'target_phone' => '087712345678',
+        'base_amount' => 15000,
+        'unique_code' => 0,
+        'total_amount' => 15000,
+        'status' => 'proses',
+        'payment_method' => 'balance',
+    ]);
+
+    $msg = 'T#1467933357 R#ORD-GETFAIL1 XDCF3.087712345678 GAGAL Produk sedang gangguan. Saldo dikembalikan.';
+    $response = $this->getJson(route('api.callback.okeconnect', ['message' => $msg]));
+    $response->assertStatus(200)->assertJsonPath('success', true)->assertJsonPath('refunded', true);
+
+    $order->refresh();
+    expect($order->status)->toBe('gagal');
+    expect($order->refunded_at)->not->toBeNull();
+    expect((int) $buyer->fresh()->getOrCreateBalance()->balance)->toBe(20000);
+
+    // Retry callback should NOT refund a second time
+    $retry = $this->getJson(route('api.callback.okeconnect', ['message' => $msg]));
+    $retry->assertStatus(200)->assertJsonPath('refunded', false);
+    expect((int) $buyer->fresh()->getOrCreateBalance()->balance)->toBe(20000);
+});
+
+test('okeconnect GET callback parses SUKSES report message and stores SN', function () {
+    $product = Product::create([
+        'name' => 'XL Data 15GB',
+        'price' => 15000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'XDCF3',
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-GETOK1',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'buyer@example.com',
+        'target_phone' => '087712345678',
+        'base_amount' => 15000,
+        'unique_code' => 0,
+        'total_amount' => 15000,
+        'status' => 'proses',
+    ]);
+
+    $msg = 'T#1467933357 R#ORD-GETOK1 XDCF3.087712345678 SUKSES SN:998877665544';
+    $response = $this->getJson(route('api.callback.okeconnect', ['message' => $msg]));
+    $response->assertStatus(200)->assertJsonPath('success', true);
+
+    $order->refresh();
+    expect($order->status)->toBe('sukses');
+    expect($order->sn)->toBe('998877665544');
+});
+
+test('immediate GAGAL response from okeconnect during balance checkout marks order gagal and refunds balance', function () {
+    Http::fake([
+        'h2h.okeconnect.com/*' => Http::response('GAGAL Saldo Anda tidak cukup', 200),
+    ]);
+
+    $buyer = User::create([
+        'name' => 'Sync Fail Buyer',
+        'email' => 'syncfail@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+    $buyer->getOrCreateBalance()->update(['balance' => 30000]);
+
+    $product = Product::create([
+        'name' => 'XL Data H2H',
+        'price' => 18000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'status' => 'open',
+        'orderkuota_product_code' => 'XDCF3',
+    ]);
+
+    $response = $this->actingAs($buyer)->postJson(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'syncfail@example.com',
+        'target_phone' => '087712345678',
+        'payment_method' => 'balance',
+    ]);
+
+    $response->assertStatus(422)->assertJsonPath('refunded', true);
+    $order = Order::first();
+    expect($order->status)->toBe('gagal');
+    expect($order->refunded_at)->not->toBeNull();
+    expect((int) $buyer->fresh()->getOrCreateBalance()->balance)->toBe(30000);
+});
+
 test('checkout requires target_phone for supplier products with correct format', function () {
     $user = User::create([
         'name' => 'Test Buyer',

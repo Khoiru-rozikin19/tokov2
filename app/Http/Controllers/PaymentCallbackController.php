@@ -182,8 +182,9 @@ class PaymentCallbackController extends Controller
                     }
                 }
 
-                // Complete the order
-                $order->status = $order->is_preorder ? 'proses' : 'sukses';
+                // Complete the order (H2H products stay 'proses' until OKEConnect confirms success)
+                $isH2H = $order->product && !empty($order->product->orderkuota_product_code);
+                $order->status = ($order->is_preorder || $isH2H) ? 'proses' : 'sukses';
                 $order->save();
 
                 // Seller commissions replaced by role-based product discounts
@@ -239,6 +240,7 @@ class PaymentCallbackController extends Controller
                     if (!$order->is_preorder) {
                         try {
                             app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                            $order->refresh();
                         } catch (\Exception $e) {
                             Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
                         }
@@ -271,6 +273,18 @@ class PaymentCallbackController extends Controller
                                                  . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                                  . "👤 *Pelanggan:* {$customerName}\n\n"
                                                  . "Status pre-order telah diubah menjadi *PROSES* (pembayaran diverifikasi otomatis) dan akan diproses saat supplier buka.";
+                                } elseif (in_array($order->status, ['gagal', 'failed'])) {
+                                    $updatedText = "❌ *Pembayaran Lunas - H2H Gagal (Auto-Refund)*\n\n"
+                                                 . "📦 *ID Order:* `{$order->id}`\n"
+                                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                                 . "Pembayaran QRIS diterima, tetapi OKEConnect menolak transaksi. Dana telah di-refund otomatis.";
+                                } elseif ($order->status === 'proses') {
+                                    $updatedText = "⏳ *Pembayaran Lunas - Diproses H2H (Otomatis)*\n\n"
+                                                 . "📦 *ID Order:* `{$order->id}`\n"
+                                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                                 . "Pembayaran QRIS berhasil diverifikasi dan pesanan sedang diproses di OKEConnect (menunggu callback).";
                                 } else {
                                     $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
                                                  . "📦 *ID Order:* `{$order->id}`\n"
@@ -299,7 +313,7 @@ class PaymentCallbackController extends Controller
                                 'preorder_received',
                                 \App\Services\WhatsappService::formatPreorderMessage($order, false)
                             );
-                        } else {
+                        } elseif (in_array($order->status, ['success', 'paid', 'sukses'])) {
                             $whatsappService->sendAutomatedNotification(
                                 'order_success',
                                 \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'QRIS Otomatis')

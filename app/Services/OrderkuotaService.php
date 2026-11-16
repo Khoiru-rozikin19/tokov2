@@ -109,19 +109,227 @@ class OrderkuotaService
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
                 $response = Http::get($urlTarget);
+                $responseBody = (string) $response->body();
                 Log::info("OKEConnect HTTP Request Sent (Testing Mock): " . $urlTarget);
+            } else {
+                // Eksekusi request menggunakan file_get_contents agar literal '@' terkirim murni secara raw text
+                $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
+                $rawResult = @file_get_contents($urlTarget, false, $context);
+                $responseBody = $rawResult !== false ? (string) $rawResult : '';
+            }
+
+            Log::info("OKEConnect Shotgun Response: " . ($responseBody !== '' ? $responseBody : 'TIMEOUT/NO RESPONSE'));
+
+            $parsed = self::parseOkeconnectResponse($responseBody);
+
+            if ($parsed['state'] === 'success') {
+                $updateData = [
+                    'status' => 'sukses',
+                    'supplier_response' => $responseBody !== '' ? $responseBody : 'SUKSES',
+                ];
+                if (!empty($parsed['sn'])) {
+                    $updateData['sn'] = $parsed['sn'];
+                }
+                $order->update($updateData);
                 return true;
             }
 
-            // Eksekusi request menggunakan file_get_contents agar literal '@' terkirim murni secara raw text
-            $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
-            $responseBody = @file_get_contents($urlTarget, false, $context);
+            if ($parsed['state'] === 'process') {
+                $order->update([
+                    'status' => 'proses',
+                    'supplier_response' => $responseBody,
+                ]);
+                return true;
+            }
 
-            Log::info("OKEConnect Shotgun Response: " . ($responseBody ?: 'TIMEOUT/NO RESPONSE'));
-            return true;
+            if ($parsed['state'] === 'failed') {
+                $didRefund = $order->refundToBuyer($parsed['reason'], 'gagal');
+                $this->notifyH2HFailureToAdmin($order, $parsed['reason'], $didRefund);
+                return false;
+            }
+
+            // Timeout atau respons tidak dikenal -> pertahankan status 'proses' (jangan anggap sukses, jangan refund buta) & beri peringatan ke Admin
+            $reason = $parsed['reason'];
+            $order->update([
+                'status' => 'proses',
+                'supplier_response' => $reason,
+            ]);
+            if (!app()->runningUnitTests()) {
+                $this->notifyH2HWarningToAdmin($order, $reason);
+            }
+            return false;
         } catch (\Exception $e) {
             Log::error("OKEConnect HTTP Request Failed (Shotgun URL): " . $e->getMessage());
+            $reason = 'Gagal koneksi H2H OKEConnect: ' . $e->getMessage();
+            $order->update([
+                'status' => 'proses',
+                'supplier_response' => $reason,
+            ]);
+            if (!app()->runningUnitTests()) {
+                $this->notifyH2HWarningToAdmin($order, $reason);
+            }
             return false;
+        }
+    }
+
+    /**
+     * Parse raw text or JSON response from OKEConnect H2H API / callback message.
+     *
+     * @return array{state: string, sn: ?string, reason: string}
+     */
+    public static function parseOkeconnectResponse(string $rawBody): array
+    {
+        $trimmed = trim($rawBody);
+        if ($trimmed === '') {
+            return [
+                'state' => 'unknown',
+                'sn' => null,
+                'reason' => 'Timeout / tidak ada respons awal dari OKEConnect (menunggu callback atau cek manual)',
+            ];
+        }
+
+        // Handle JSON payload if supplier responds in JSON format
+        $decoded = json_decode($trimmed, true);
+        if (is_array($decoded)) {
+            $jsonStatus = strtoupper((string) ($decoded['status'] ?? ''));
+            $jsonMsg = (string) ($decoded['message'] ?? $decoded['note'] ?? $trimmed);
+            $jsonSn = $decoded['sn'] ?? $decoded['serial_number'] ?? $decoded['token'] ?? null;
+
+            if (in_array($jsonStatus, ['SUCCESS', 'SUKSES', 'BERHASIL', 'OK', '1'], true)) {
+                return ['state' => 'success', 'sn' => $jsonSn ? (string) $jsonSn : null, 'reason' => $jsonMsg];
+            }
+            if (in_array($jsonStatus, ['FAILED', 'GAGAL', 'ERROR', 'BATAL', 'DIBATALKAN', '0'], true)) {
+                return ['state' => 'failed', 'sn' => null, 'reason' => $jsonMsg];
+            }
+            if (in_array($jsonStatus, ['PROSES', 'PROCESS', 'PENDING', 'ANTREAN'], true)) {
+                return ['state' => 'process', 'sn' => null, 'reason' => $jsonMsg];
+            }
+            $trimmed = $jsonMsg;
+        }
+
+        // Extract Serial Number / Token if present in OtoMax / OKEConnect report string
+        $sn = null;
+        if (preg_match('/(?:SN|Serial\s*Number|Token|Voucher|Ref)\s*[:=#]\s*([A-Za-z0-9\/\-\._]+)/i', $trimmed, $snMatches)) {
+            $candidate = trim($snMatches[1], ".,;");
+            if ($candidate !== '' && !preg_match('/^ORD-/i', $candidate)) {
+                $sn = $candidate;
+            }
+        }
+
+        $lower = strtolower($trimmed);
+
+        // Explicit failure patterns (checked before success/process so messages like "GAGAL ... saldo dikembalikan" always resolve to failed)
+        $failurePatterns = [
+            '/\bgagal\b/i',
+            '/\bfailed\b/i',
+            '/saldo\s*(?:anda\s*)?(?:tidak\s*cukup|kurang|habis|minus|tidak\s*mencukupi)/i',
+            '/saldo\s*dikembalikan/i',
+            '/nomor\s*(?:tujuan\s*)?(?:salah|tidak\s*valid|tidak\s*terdaftar|diblokir)/i',
+            '/tujuan\s*(?:salah|tidak\s*valid)/i',
+            '/(?:produk|layanan|stok)\s*(?:sedang\s*)?(?:gangguan|close|ditutup|kosong|habis|tidak\s*aktif)/i',
+            '/(?:pin|password|member\s*id|ip)\s*(?:anda\s*)?(?:salah|tidak\s*terdaftar|tidak\s*diizinkan|ditolak)/i',
+            '/\bdibatalkan\b/i',
+            '/\bbatal\b/i',
+            '/\b(?:invalid|error)\b/i',
+            '/transaksi\s*ganda/i',
+        ];
+
+        foreach ($failurePatterns as $pattern) {
+            if (preg_match($pattern, $lower)) {
+                return [
+                    'state' => 'failed',
+                    'sn' => null,
+                    'reason' => $trimmed,
+                ];
+            }
+        }
+
+        // Queued / Processing response (e.g. "T#1467933357 R#ORD-BNVPAXXN ... akan diproses. Saldo ...")
+        if (preg_match('/akan\s*diproses|sedang\s*diproses|\bproses\b|\bpending\b|\bmenunggu\b|\bantri\b/i', $lower)) {
+            return [
+                'state' => 'process',
+                'sn' => $sn,
+                'reason' => $trimmed,
+            ];
+        }
+
+        // Explicit success response
+        if (preg_match('/\b(?:sukses|success|berhasil)\b/i', $lower)) {
+            return [
+                'state' => 'success',
+                'sn' => $sn,
+                'reason' => $trimmed,
+            ];
+        }
+
+        return [
+            'state' => 'unknown',
+            'sn' => $sn,
+            'reason' => $trimmed,
+        ];
+    }
+
+    /**
+     * Send alert to Admin (WhatsApp + Telegram) when an H2H order fails and triggers refund handling.
+     */
+    public function notifyH2HFailureToAdmin(Order $order, string $reason, bool $didRefund): void
+    {
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            $whatsappService->sendAutomatedNotification(
+                'h2h_order_failed',
+                \App\Services\WhatsappService::formatH2HFailureMessage($order, $reason, $didRefund)
+            );
+        } catch (\Throwable $e) {
+            Log::error("OrderkuotaService notifyH2HFailureToAdmin WA error: " . $e->getMessage());
+        }
+
+        if (!app()->runningUnitTests()) {
+            try {
+                $telegramService = app(\App\Services\TelegramService::class);
+                $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
+                if ($adminId) {
+                    $productName = $order->product ? $order->product->name : 'Produk H2H';
+                    $amountFmt = number_format((int) $order->total_amount, 0, ',', '.');
+                    $refundText = $didRefund
+                        ? 'Saldo otomatis dikembalikan ke akun pembeli.'
+                        : ($order->user_id ? 'Sudah pernah di-refund / cek manual.' : 'Order Guest (tanpa akun) — perlu refund manual!');
+
+                    $tgText = "🚨 *Transaksi H2H Gagal (OKEConnect)*\n\n"
+                            . "📦 *ID Order:* `{$order->id}`\n"
+                            . "🛍️ *Produk:* {$productName}\n"
+                            . "📱 *Tujuan:* `{$order->target_phone}`\n"
+                            . "💰 *Nominal:* Rp {$amountFmt}\n"
+                            . "❌ *Respon:* {$reason}\n"
+                            . "↩️ *Refund:* {$refundText}";
+                    $telegramService->sendMessage($adminId, $tgText);
+                }
+            } catch (\Throwable $e) {
+                Log::error("OrderkuotaService notifyH2HFailureToAdmin Telegram error: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Send warning to Admin when initial H2H request times out or returns an unknown response.
+     */
+    public function notifyH2HWarningToAdmin(Order $order, string $reason): void
+    {
+        try {
+            $telegramService = app(\App\Services\TelegramService::class);
+            $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
+            if ($adminId) {
+                $productName = $order->product ? $order->product->name : 'Produk H2H';
+                $tgText = "⚠️ *Peringatan H2H OKEConnect (Perlu Cek)*\n\n"
+                        . "📦 *ID Order:* `{$order->id}`\n"
+                        . "🛍️ *Produk:* {$productName}\n"
+                        . "📱 *Tujuan:* `{$order->target_phone}`\n"
+                        . "💬 *Info:* {$reason}\n\n"
+                        . "Status order dipertahankan di *PROSES*. Cek panel OKEConnect atau tunggu callback.";
+                $telegramService->sendMessage($adminId, $tgText);
+            }
+        } catch (\Throwable $e) {
+            Log::error("OrderkuotaService notifyH2HWarningToAdmin error: " . $e->getMessage());
         }
     }
 
@@ -450,12 +658,13 @@ class OrderkuotaService
  
                 // Proteksi Transaksi Ganda: Kunci status di database sebelum mengirimkan request HTTP ke supplier
                 $order->update([
-                    'status' => 'sukses',
+                    'status' => 'proses',
                     'is_preorder' => false
                 ]);
- 
+
                 $this->kirimPesananKeOrderkuota($order->id);
- 
+                $order->refresh();
+
                 // Update Telegram notification
                 if ($order->telegram_message_id) {
                     try {
@@ -463,11 +672,20 @@ class OrderkuotaService
                         $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
                         $formattedAmount = number_format($order->total_amount, 0, ',', '.');
                         $customerName = $order->email_or_whatsapp;
-                        $updatedText = "✅ *Pre-Order Berhasil (Otomatis)*\n\n"
-                                     . "📦 *ID Order:* `{$order->id}`\n"
-                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
-                                     . "👤 *Pelanggan:* {$customerName}\n\n"
-                                     . "Pre-order berhasil diteruskan ke supplier (status berubah menjadi *SUKSES*).";
+                        if ($order->status === 'gagal') {
+                            $updatedText = "❌ *Pre-Order Gagal di Supplier (Auto-Refund)*\n\n"
+                                         . "📦 *ID Order:* `{$order->id}`\n"
+                                         . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                         . "👤 *Pelanggan:* {$customerName}\n\n"
+                                         . "Supplier menolak pre-order dan dana telah dikembalikan ke saldo pembeli.";
+                        } else {
+                            $statusNote = $order->status === 'sukses' ? 'SUKSES' : 'PROSES (Menunggu Callback H2H)';
+                            $updatedText = "✅ *Pre-Order Berhasil (Otomatis)*\n\n"
+                                         . "📦 *ID Order:* `{$order->id}`\n"
+                                         . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                         . "👤 *Pelanggan:* {$customerName}\n\n"
+                                         . "Pre-order berhasil diteruskan ke supplier (status: *{$statusNote}*).";
+                        }
                         $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
                     } catch (\Exception $te) {
                         Log::error("OrderkuotaService: Gagal memperbarui Telegram pre-order {$order->id}: " . $te->getMessage());
@@ -475,14 +693,16 @@ class OrderkuotaService
                 }
 
                 // Kirim notifikasi WhatsApp otomatis sesuai tujuan yang dicentang (Admin / Grup)
-                try {
-                    $whatsappService = app(\App\Services\WhatsappService::class);
-                    $whatsappService->sendAutomatedNotification(
-                        'preorder_received',
-                        \App\Services\WhatsappService::formatPreorderMessage($order, true)
-                    );
-                } catch (\Throwable $we) {
-                    Log::error("OrderkuotaService: Gagal mengirim WhatsApp pre-order {$order->id}: " . $we->getMessage());
+                if ($order->status !== 'gagal') {
+                    try {
+                        $whatsappService = app(\App\Services\WhatsappService::class);
+                        $whatsappService->sendAutomatedNotification(
+                            'preorder_received',
+                            \App\Services\WhatsappService::formatPreorderMessage($order, true)
+                        );
+                    } catch (\Throwable $we) {
+                        Log::error("OrderkuotaService: Gagal mengirim WhatsApp pre-order {$order->id}: " . $we->getMessage());
+                    }
                 }
  
                 // Proteksi Rate Limiting: Berikan jeda 1 detik per transaksi agar IP VPS tidak diblokir supplier

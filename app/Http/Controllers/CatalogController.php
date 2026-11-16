@@ -168,6 +168,7 @@ class CatalogController extends Controller
                     ]);
 
                     // Create the order (paid immediately)
+                    $isH2H = !empty($product->orderkuota_product_code);
                     $modalSnapshot = (int) ($product->harga_modal ?? 0);
                     $order = Order::create([
                         'id' => $orderId,
@@ -181,7 +182,7 @@ class CatalogController extends Controller
                         'total_amount' => $price,
                         'cost_price' => $modalSnapshot,
                         'profit' => (int) $price - $modalSnapshot,
-                        'status' => $isPreorder ? 'proses' : 'sukses',
+                        'status' => ($isPreorder || $isH2H) ? 'proses' : 'sukses',
                         'is_preorder' => $isPreorder,
                         'payment_method' => 'balance',
                         'qris_payload' => null,
@@ -210,15 +211,9 @@ class CatalogController extends Controller
                         $order->save();
                     }
 
-                    if (!$isPreorder) {
-                        // Run VPS account creation if product is linked to a VPS server
-                        if ($product->vps_server_id) {
-                            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                            $order->save();
-                        }
-
-                        // Kirim pesanan ke Orderkuota jika applicable
-                        app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                    if (!$isPreorder && $product->vps_server_id) {
+                        app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                        $order->save();
                     }
 
                     // Decrement product stock if not unlimited
@@ -236,7 +231,21 @@ class CatalogController extends Controller
 
                     return $order;
                 });
- 
+
+                // Eksekusi request H2H ke OKEConnect di luar DB transaction agar evaluasi & auto-refund tidak terkunci transaksi luar
+                if ($order && !$isPreorder && !empty($product->orderkuota_product_code)) {
+                    app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                    $order->refresh();
+                }
+
+                if ($order && in_array($order->status, ['gagal', 'failed'])) {
+                    return response()->json([
+                        'success' => false,
+                        'refunded' => true,
+                        'message' => 'Transaksi gagal diproses oleh supplier OKEConnect. Saldo Anda telah dikembalikan otomatis ke akun.',
+                    ], 422);
+                }
+
                 if ($order && $order->is_preorder) {
                     try {
                         app(\App\Services\TelegramService::class)->sendAdminPreorderNotification($order);
@@ -260,24 +269,32 @@ class CatalogController extends Controller
                         if ($adminId) {
                             $formattedAmount = number_format($order->total_amount, 0, ',', '.');
                             $productName = $product->name ?? 'Produk';
-                            $text = "✅ *Transaksi Saldo Sukses*\n\n"
+                            $statusHeading = $order->status === 'sukses'
+                                ? '✅ *Transaksi Saldo Sukses*'
+                                : '⏳ *Transaksi Saldo Diproses H2H*';
+                            $statusDesc = $order->status === 'sukses'
+                                ? 'Pembayaran menggunakan *Saldo Akun* berhasil dan pesanan telah selesai diproses.'
+                                : 'Pembayaran menggunakan *Saldo Akun* berhasil dan pesanan sedang diproses di OKEConnect (menunggu callback konfirmasi).';
+                            $text = "{$statusHeading}\n\n"
                                   . "📦 *ID Order:* `{$order->id}`\n"
                                   . "🛍️ *Produk:* {$productName}\n"
                                   . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                   . "👤 *Pelanggan:* {$order->email_or_whatsapp}\n\n"
-                                  . "Pembayaran menggunakan *Saldo Akun* berhasil dan pesanan telah diproses otomatis.";
+                                  . $statusDesc;
                             $telegramService->sendMessage($adminId, $text);
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke Telegram: " . $e->getMessage());
                     }
-                    try {
-                        app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
-                            'order_success',
-                            \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'Saldo Akun')
-                        );
-                    } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke WhatsApp: " . $e->getMessage());
+                    if ($order->status === 'sukses') {
+                        try {
+                            app(\App\Services\WhatsappService::class)->sendAutomatedNotification(
+                                'order_success',
+                                \App\Services\WhatsappService::formatOrderSuccessMessage($order, 'Saldo Akun')
+                            );
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi transaksi saldo ke WhatsApp: " . $e->getMessage());
+                        }
                     }
                 }
             } catch (\Exception $e) {
@@ -397,6 +414,8 @@ class CatalogController extends Controller
 
         $response = [
             'status' => $order->status,
+            'sn' => $order->sn,
+            'refunded' => $order->refunded_at !== null,
             'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses', 'proses']),
         ];
 
