@@ -1030,10 +1030,17 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:50|unique:categories,name',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('categories', 'public');
+        }
 
         \App\Models\Category::create([
             'name' => $request->name,
+            'image_path' => $imagePath,
         ]);
 
         $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
@@ -1041,6 +1048,46 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Update category name or image via AJAX.
+     */
+    public function updateCategory(Request $request, $id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $category = \App\Models\Category::findOrFail($id);
+
+        $request->validate([
+            'name' => 'nullable|string|max:50|unique:categories,name,' . $category->id,
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
+        ]);
+
+        if ($request->filled('name')) {
+            $category->name = trim($request->name);
+        }
+
+        if ($request->hasFile('image')) {
+            if ($category->image_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($category->image_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($category->image_path);
+            }
+            $category->image_path = $request->file('image')->store('categories', 'public');
+        } elseif ($request->boolean('remove_image')) {
+            if ($category->image_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($category->image_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($category->image_path);
+            }
+            $category->image_path = null;
+        }
+
+        $category->save();
+
+        return response()->json([
+            'success' => true,
+            'category' => $category,
         ]);
     }
 

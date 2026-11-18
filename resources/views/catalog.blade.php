@@ -34,21 +34,96 @@
         </div>
     </div>
     @endif
- 
-    <!-- Categories Filter -->
-    <div class="flex items-center space-x-2 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        <a href="{{ route('catalog') }}" class="px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap {{ !request()->filled('category_id') ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
-            Semua
-        </a>
-        @foreach($categories as $category)
-            <a href="{{ route('catalog', ['category_id' => $category->id]) }}" class="px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap {{ request('category_id') == $category->id ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
-                {{ $category->name }}
-            </a>
-        @endforeach
-    </div>
 
-    <!-- Product Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+    @if(!request()->filled('category_id'))
+        <!-- Category Rectangular Cards View (Initial /catalog Page) -->
+        <div class="space-y-4">
+            <div class="border-b border-slate-200 dark:border-slate-800 pb-4">
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Pilih Kategori Produk</h2>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Pilih kategori di bawah ini untuk melihat daftar produk yang tersedia.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                @forelse($categories as $category)
+                    <a href="{{ route('catalog', ['category_id' => $category->id]) }}" class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 sm:p-5 flex items-center justify-between hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-sm">
+                        <!-- Left: Category Name & Info -->
+                        <div class="flex-1 min-w-0 pr-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 mb-2">
+                                {{ $category->visible_products_count ?? 0 }} Produk
+                            </span>
+                            <h3 class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {{ $category->name }}
+                            </h3>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-blue-600 dark:text-blue-400 mt-3">
+                                <span>Buka Kategori</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path>
+                                </svg>
+                            </span>
+                        </div>
+
+                        <!-- Right: Category Image Box -->
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center relative">
+                            @if($category->image_path)
+                                <img src="{{ asset('storage/' . $category->image_path) }}"
+                                     alt="{{ $category->name }}"
+                                     class="max-w-full max-h-full object-contain"
+                                     onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                <div class="w-full h-full bg-blue-50 dark:bg-blue-950/20 items-center justify-center hidden">
+                                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-blue-500/80" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                </div>
+                            @else
+                                <div class="w-full h-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
+                                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-blue-500/80" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                </div>
+                            @endif
+                        </div>
+                    </a>
+                @empty
+                    <div class="col-span-full py-16 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+                        <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Belum Ada Kategori Produk</h3>
+                        <p class="text-xs text-slate-450 dark:text-slate-500 mt-1 max-w-sm mx-auto">Kategori produk belum dibuat untuk saat ini.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    @else
+        <!-- Selected Category Header + Back Button -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-sm">
+            <div class="flex items-center space-x-3 min-w-0">
+                <a href="{{ route('catalog') }}" class="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"></path>
+                    </svg>
+                    <span>Kembali</span>
+                </a>
+                <div class="min-w-0">
+                    <h2 class="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-100 truncate">
+                        {{ $selectedCategory->name ?? 'Kategori Produk' }}
+                    </h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">{{ $products->count() }} produk ditemukan</p>
+                </div>
+            </div>
+
+            @if($selectedCategory && $selectedCategory->image_path)
+                <div class="w-12 h-12 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center flex-shrink-0 ml-3">
+                    <img src="{{ asset('storage/' . $selectedCategory->image_path) }}"
+                         alt="{{ $selectedCategory->name }}"
+                         class="max-w-full max-h-full object-contain"
+                         onerror="this.parentElement.style.display='none';">
+                </div>
+            @endif
+        </div>
+
+        <!-- Product Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         @forelse($products as $product)
             @php
                 $finalPriceQris = $product->getFinalPriceForUser(auth()->user(), 'qris');
@@ -183,12 +258,13 @@
                 </p>
                 @if(request()->filled('category_id'))
                     <a href="{{ route('catalog') }}" class="inline-flex items-center space-x-2 px-4 py-2 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                        <span>Lihat Semua Produk</span>
+                        <span>Kembali ke Daftar Kategori</span>
                     </a>
                 @endif
             </div>
         @endforelse
-    </div>
+        </div>
+    @endif
 </div>
 
 <!-- PURCHASE MODAL -->

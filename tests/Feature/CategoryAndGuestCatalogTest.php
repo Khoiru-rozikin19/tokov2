@@ -22,14 +22,14 @@ test('guests can view homepage catalog and filter by category but get redirected
         'stock' => 10,
     ]);
 
-    // Guest views catalog
+    // Guest views initial catalog (shows only category cards, not product list)
     $response = $this->get('/');
     $response->assertStatus(200)
-             ->assertSee('Product X')
+             ->assertDontSee('Product X')
              ->assertSee('Category A')
              ->assertSee('Category B');
 
-    // Guest filters by Category A
+    // Guest opens Category A (shows Product X)
     $responseCat1 = $this->get('/?category_id=' . $cat1->id);
     $responseCat1->assertStatus(200)
                  ->assertSee('Product X');

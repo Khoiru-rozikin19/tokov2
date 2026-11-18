@@ -120,6 +120,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
 
         // Kelola Kategori Produk
         Route::post('/categories', [AdminController::class, 'storeCategory'])->name('categories.store');
+        Route::post('/categories/{id}/update', [AdminController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('categories.delete');
         Route::post('/categories/reorder', [AdminController::class, 'reorderCategories'])->name('categories.reorder');
 

@@ -582,35 +582,56 @@
 
         <div class="space-y-6">
             <!-- Form Tambah Kategori -->
-            <div class="space-y-2">
+            <div class="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                 <label for="modalCategoryName" class="block text-xs font-bold text-slate-500 uppercase">Tambah Kategori Baru</label>
-                <div class="flex gap-2">
-                    <input type="text" id="modalCategoryName" placeholder="Nama Kategori..." class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <button type="button" onclick="createCategoryFromModal()" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
-                        Tambah
-                    </button>
+                <div class="space-y-2.5">
+                    <input type="text" id="modalCategoryName" placeholder="Nama Kategori (misal: Kuota XL)..." class="w-full px-4 py-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Gambar Kategori (Opsional):</label>
+                            <input type="file" id="modalCategoryImage" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100">
+                        </div>
+                        <button type="button" id="btnCreateCategory" onclick="createCategoryFromModal()" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200 flex-shrink-0">
+                            + Tambah
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Daftar Kategori dengan Hapus & Pengurutan -->
+            <!-- Daftar Kategori dengan Gambar, Hapus & Pengurutan -->
             <div class="space-y-3">
                 <div class="flex justify-between items-center">
                     <label class="block text-xs font-bold text-slate-500 uppercase">Daftar Kategori</label>
                     <span class="text-[10px] text-slate-400 dark:text-slate-50 font-medium select-none hidden sm:inline">Geser item atau gunakan panah untuk mengurutkan</span>
                 </div>
                 @if($categories->count() > 0)
-                <div id="categoriesSortableList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div id="categoriesSortableList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
                     @foreach($categories as $category)
-                        <div class="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 category-item transition-all duration-200 cursor-default" data-id="{{ $category->id }}">
-                            <div class="flex items-center min-w-0 flex-1">
+                        <div class="flex items-center justify-between px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 category-item transition-all duration-200 cursor-default" data-id="{{ $category->id }}">
+                            <div class="flex items-center min-w-0 flex-1 space-x-2.5">
                                 <!-- Drag Handle -->
-                                <svg class="w-4 h-4 text-slate-400 dark:text-slate-600 mr-2.5 flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-slate-600 dark:hover:text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9h.01M8 15h.01M12 9h.01M12 15h.01M16 9h.01M16 15h.01"></path></svg>
+                                <svg class="w-4 h-4 text-slate-400 dark:text-slate-600 flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-slate-600 dark:hover:text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9h.01M8 15h.01M12 9h.01M12 15h.01M16 9h.01M16 15h.01"></path></svg>
+
+                                <!-- Category Image Thumbnail -->
+                                <div class="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-center flex-shrink-0">
+                                    @if($category->image_path)
+                                        <img src="{{ asset('storage/' . $category->image_path) }}" alt="{{ $category->name }}" class="max-w-full max-h-full object-contain" onerror="this.style.display='none';">
+                                    @else
+                                        <svg class="w-5 h-5 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    @endif
+                                </div>
+
                                 <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate pr-2 select-none">
                                     {{ $category->name }}
                                 </span>
                             </div>
                             
                             <div class="flex items-center space-x-1 flex-shrink-0">
+                                <!-- Upload / Ubah Gambar Kategori -->
+                                <label class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl text-[11px] font-bold cursor-pointer transition-all whitespace-nowrap" title="Atur / Ganti Gambar Kategori">
+                                    <span>📷 Gambar</span>
+                                    <input type="file" accept="image/*" class="hidden" onchange="uploadCategoryImage({{ $category->id }}, this)">
+                                </label>
                                 <!-- Move Up -->
                                 <button type="button" onclick="moveCategoryUp({{ $category->id }}, this)" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 rounded-lg transition-all" title="Pindahkan ke atas">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
@@ -936,30 +957,70 @@
 
     function createCategoryFromModal() {
         const input = document.getElementById('modalCategoryName');
+        const imgInput = document.getElementById('modalCategoryImage');
+        const btn = document.getElementById('btnCreateCategory');
         if (!input) return;
         const name = input.value.trim();
         if (!name) return;
-        
+
+        const formData = new FormData();
+        formData.append('name', name);
+        if (imgInput && imgInput.files && imgInput.files[0]) {
+            formData.append('image', imgInput.files[0]);
+        }
+
+        if (btn) btn.disabled = true;
+
         fetch("{{ route('admin.categories.store') }}", {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify({ name: name })
+            body: formData
         })
         .then(res => res.json())
         .then(data => {
+            if (btn) btn.disabled = false;
             if (data.success) {
                 input.value = '';
+                if (imgInput) imgInput.value = '';
                 window.location.reload();
             } else {
                 alert(data.message || 'Gagal menambahkan kategori.');
             }
         })
         .catch(err => {
+            if (btn) btn.disabled = false;
             console.error(err);
             alert('Terjadi kesalahan koneksi.');
+        });
+    }
+
+    function uploadCategoryImage(id, fileInput) {
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+
+        fetch("{{ route('admin.categories.update', ':id') }}".replace(':id', id), {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message || 'Gagal memperbarui gambar kategori.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Terjadi kesalahan saat mengunggah gambar kategori.');
         });
     }
 

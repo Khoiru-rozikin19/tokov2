@@ -24,30 +24,39 @@ class CatalogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['discount', 'seller', 'stocks']);
+        $user = auth()->user();
+
+        // Filter visibilitas produk sesuai role user
+        $applyVisibility = function ($q) use ($user) {
+            if (!$user || $user->role === 'buyer') {
+                $q->where(function ($sub) {
+                    $sub->where('visibility', 'all')->orWhereNull('visibility');
+                });
+            } elseif ($user->role === 'seller') {
+                $q->whereIn('visibility', ['all', 'admin_seller']);
+            }
+        };
+
+        $categories = \App\Models\Category::withCount(['products as visible_products_count' => $applyVisibility])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $selectedCategory = null;
+        $products = collect();
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $selectedCategory = $categories->firstWhere('id', (int) $request->category_id);
+
+            $query = Product::with(['discount', 'seller', 'stocks'])
+                ->where('category_id', $request->category_id);
+            $applyVisibility($query);
+            $products = $query->get();
         }
 
-        // Filter berdasarkan visibility dan role user
-        $user = auth()->user();
-        if (!$user || $user->role === 'buyer') {
-            // Buyer / guest: hanya produk 'all'
-            $query->where(function ($q) {
-                $q->where('visibility', 'all')->orWhereNull('visibility');
-            });
-        } elseif ($user->role === 'seller') {
-            // Seller: produk 'all' dan 'admin_seller'
-            $query->whereIn('visibility', ['all', 'admin_seller']);
-        }
-        // Admin: lihat semua produk (tanpa filter visibility)
-
-        $products = $query->get();
-        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $qris_configured = !empty(Setting::get('qris_static_string'));
 
-        return view('catalog', compact('products', 'categories', 'qris_configured'));
+        return view('catalog', compact('products', 'categories', 'selectedCategory', 'qris_configured'));
     }
 
     /**
