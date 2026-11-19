@@ -98,6 +98,7 @@ class OkeconnectCallbackController extends Controller
 
             $updateData = [
                 'status' => $targetStatus,
+                'fulfillment_stage' => 'done',
                 'is_preorder' => false,
                 'supplier_response' => $responseNote,
             ];

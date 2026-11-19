@@ -10,6 +10,7 @@ use App\Services\QrisService;
 use App\Services\TelegramService;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class CatalogController extends Controller
 {
@@ -137,8 +138,13 @@ class CatalogController extends Controller
             $price = $product->getFinalPriceForUser($user, 'balance');
             $orderId = 'ORD-' . strtoupper(Str::random(8));
 
+            // Mode "deferred": pesanan dibuat & saldo dipotong dulu, proses akun VPN / penerusan pesanan
+            // dijalankan setelah respons dikirim agar pembeli bisa melihat progres real-time di layar.
+            $deferred = !$isPreorder
+                && (!empty($product->vps_server_id) || !empty($product->orderkuota_product_code));
+
             try {
-                $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price, $isPreorder) {
+                $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price, $isPreorder, $deferred) {
                     // Lock the user balance row
                     $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
                     if (!$balanceRecord) {
@@ -191,7 +197,8 @@ class CatalogController extends Controller
                         'total_amount' => $price,
                         'cost_price' => $modalSnapshot,
                         'profit' => (int) $price - $modalSnapshot,
-                        'status' => ($isPreorder || $isH2H) ? 'proses' : 'sukses',
+                        'status' => ($isPreorder || $isH2H || $deferred) ? 'proses' : 'sukses',
+                        'fulfillment_stage' => $deferred ? 'queued' : null,
                         'is_preorder' => $isPreorder,
                         'payment_method' => 'balance',
                         'qris_payload' => null,
@@ -220,7 +227,7 @@ class CatalogController extends Controller
                         $order->save();
                     }
 
-                    if (!$isPreorder && $product->vps_server_id) {
+                    if (!$isPreorder && !$deferred && $product->vps_server_id) {
                         app(\App\Services\VpsSshService::class)->createVpnAccount($order);
                         $order->save();
                     }
@@ -242,9 +249,29 @@ class CatalogController extends Controller
                 });
 
                 // Eksekusi request H2H ke OKEConnect di luar DB transaction agar evaluasi & auto-refund tidak terkunci transaksi luar
-                if ($order && !$isPreorder && !empty($product->orderkuota_product_code)) {
+                if ($order && !$isPreorder && !$deferred && !empty($product->orderkuota_product_code)) {
                     app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
                     $order->refresh();
+                }
+
+                // Mode deferred: jalankan pemenuhan pesanan SETELAH respons terkirim ke browser
+                if ($order && $deferred) {
+                    $deferredOrderId = $order->id;
+                    app()->terminating(function () use ($deferredOrderId) {
+                        try {
+                            $fulfillment = app(\App\Services\OrderFulfillmentService::class);
+                            $final = $fulfillment->fulfill($deferredOrderId);
+                            if ($final && !app()->runningUnitTests()) {
+                                $fulfillment->notifyAdminAfterBalancePurchase($final);
+                            }
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::error("CatalogController: pemenuhan pesanan {$deferredOrderId} error: " . $e->getMessage());
+                            $stuck = Order::with('product')->find($deferredOrderId);
+                            if ($stuck && $stuck->fulfillment_stage === 'queued') {
+                                $stuck->refundToBuyer('Terjadi kesalahan sistem saat memproses pesanan.', 'gagal');
+                            }
+                        }
+                    });
                 }
 
                 if ($order && in_array($order->status, ['gagal', 'failed'])) {
@@ -253,7 +280,7 @@ class CatalogController extends Controller
                         'refunded' => true,
                         'order_id' => $order->id,
                         'reason' => $order->getBuyerSafeFailureReason(),
-                        'message' => 'Transaksi gagal diproses oleh supplier OKEConnect. Saldo Anda telah dikembalikan otomatis ke akun.',
+                        'message' => 'Transaksi gagal diproses. Saldo Anda telah dikembalikan otomatis ke akun.',
                     ], 422);
                 }
 
@@ -273,7 +300,7 @@ class CatalogController extends Controller
                             \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi pre-order ke WhatsApp: " . $e->getMessage());
                         }
                     }
-                } elseif ($order && !app()->runningUnitTests()) {
+                } elseif ($order && !$deferred && !app()->runningUnitTests()) {
                     try {
                         $telegramService = app(\App\Services\TelegramService::class);
                         $adminId = env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618');
@@ -315,7 +342,7 @@ class CatalogController extends Controller
                 ], 422);
             }
 
-            return response()->json([
+            $responseData = [
                 'success' => true,
                 'payment_method' => 'balance',
                 'order' => [
@@ -327,7 +354,14 @@ class CatalogController extends Controller
                     'vpn_config' => $order->vpn_config,
                     'success_instruction' => $product->success_instruction,
                 ],
-            ]);
+            ];
+
+            if ($deferred) {
+                $responseData['deferred'] = true;
+                $responseData['progress'] = $order->toProgressPayload();
+            }
+
+            return response()->json($responseData);
         }
 
         // === QRIS PAYMENT (existing flow) ===
@@ -423,20 +457,7 @@ class CatalogController extends Controller
             $order->update(['status' => 'expired']);
         }
 
-        $response = [
-            'status' => $order->status,
-            'sn' => $order->sn,
-            'refunded' => $order->refunded_at !== null,
-            'reason' => in_array($order->status, ['gagal', 'failed']) ? $order->getBuyerSafeFailureReason() : null,
-            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses', 'proses']),
-        ];
-
-        if (in_array($order->status, ['success', 'paid', 'sukses', 'proses'])) {
-            $response['vpn_config'] = $order->vpn_config;
-            $response['success_instruction'] = $order->product ? $order->product->success_instruction : null;
-        }
-
-        return response()->json($response);
+        return response()->json($order->toProgressPayload());
     }
 
     /**
@@ -554,5 +575,84 @@ class CatalogController extends Controller
         });
 
         return redirect()->back()->with('success', 'Komplain Anda berhasil diajukan dan sedang ditinjau.');
+    }
+
+    /**
+     * Cancel a pending order.
+     */
+    public function cancelOrder($id)
+    {
+        $order = Order::findOrFail($id);
+        $user = auth()->user();
+
+        // Only the order owner can cancel
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk membatalkan pesanan ini.',
+            ], 403);
+        }
+
+        // Only pending or pending_manual orders can be cancelled
+        if (!in_array($order->status, ['pending', 'pending_manual'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya pesanan dengan status pending yang dapat dibatalkan.',
+            ], 422);
+        }
+
+        // Rate limit: max 2 consecutive cancellations per user within 10 minutes
+        $cacheKey = "cancel_count:{$user->id}";
+        $cancelCount = (int) Cache::get($cacheKey, 0);
+
+        if ($cancelCount >= 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda telah membatalkan terlalu banyak pesanan. Silakan tunggu 10 menit sebelum mencoba lagi.',
+            ], 429);
+        }
+
+        $order->update(['status' => 'dibatalkan']);
+
+        Cache::put($cacheKey, $cancelCount + 1, now()->addMinutes(10));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesanan berhasil dibatalkan.',
+        ]);
+    }
+
+    /**
+     * Check payment status and notify admin via Telegram.
+     */
+    public function checkPayment($id)
+    {
+        $order = Order::findOrFail($id);
+        $user = auth()->user();
+
+        // Rate limit: once per 30 seconds per order
+        $cacheKey = "check_payment:{$order->id}";
+        if (Cache::has($cacheKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan tunggu 30 detik sebelum memeriksa pembayaran lagi.',
+            ], 429);
+        }
+
+        Cache::put($cacheKey, true, 30);
+
+        // Send Telegram notification to admin
+        try {
+            $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+            $message = "👀 User {$user->email} sedang menunggu konfirmasi pembayaran untuk pesanan {$order->id} (Rp {$formattedAmount})";
+            $this->telegramService->sendMessage(
+                env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618'),
+                $message
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi check-payment ke Telegram: " . $e->getMessage());
+        }
+
+        return response()->json($order->toProgressPayload());
     }
 }

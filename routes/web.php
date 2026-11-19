@@ -46,6 +46,8 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
     Route::get('/orders/{id}/download', [CatalogController::class, 'download'])->name('order.download');
     Route::post('/orders/{id}/complain', [CatalogController::class, 'storeComplaint'])->name('order.complain');
+    Route::post('/orders/{id}/cancel', [CatalogController::class, 'cancelOrder'])->name('order.cancel');
+    Route::post('/orders/{id}/check-payment', [CatalogController::class, 'checkPayment'])->name('order.check_payment');
     
     // User Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

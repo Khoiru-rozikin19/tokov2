@@ -76,19 +76,28 @@ class VpsSshService
     }
 
     /**
+     * Pesan error internal terakhir dari createVpnAccount() (hanya untuk log/admin, jangan ditampilkan ke pembeli).
+     */
+    public ?string $lastError = null;
+
+    /**
      * Create VPN Account on VPS automatically for successful orders.
+     *
+     * @return bool|null true = akun dibuat, false = gagal, null = produk tidak memakai otomatisasi VPS
      */
     public function createVpnAccount(Order $order)
     {
+        $this->lastError = null;
         $product = $order->product;
         if (!$product || !$product->vps_server_id || !$product->vps_command_template) {
-            return;
+            return null;
         }
 
         $server = VpsServer::find($product->vps_server_id);
         if (!$server) {
             Log::error("VPS Server not found for product: " . $product->id);
-            return;
+            $this->lastError = 'Server VPS tidak ditemukan.';
+            return false;
         }
 
         // Generate username (buyer's email or phone number + order identifier to avoid duplicate username)
@@ -113,9 +122,14 @@ class VpsSshService
             if (!empty($output)) {
                 $order->vpn_config = $output;
                 // Note: We don't save the order here, we let the controller do it.
+            } else {
+                Log::warning("VPS command for order " . $order->id . " returned empty output.");
             }
+            return true;
         } catch (\Exception $e) {
             Log::error("Failed to auto-create VPS VPN account for order " . $order->id . ": " . $e->getMessage());
+            $this->lastError = $e->getMessage();
+            return false;
         }
     }
 }

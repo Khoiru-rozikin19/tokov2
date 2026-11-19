@@ -125,6 +125,7 @@ class OrderkuotaService
             if ($parsed['state'] === 'success') {
                 $updateData = [
                     'status' => 'sukses',
+                    'fulfillment_stage' => 'done',
                     'supplier_response' => $responseBody !== '' ? $responseBody : 'SUKSES',
                 ];
                 if (!empty($parsed['sn'])) {

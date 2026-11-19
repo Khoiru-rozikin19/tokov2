@@ -182,9 +182,15 @@ class PaymentCallbackController extends Controller
                     }
                 }
 
-                // Complete the order (H2H products stay 'proses' until OKEConnect confirms success)
+                // Complete the order (H2H & VPN products stay 'proses' until fulfillment confirms success)
                 $isH2H = $order->product && !empty($order->product->orderkuota_product_code);
-                $order->status = ($order->is_preorder || $isH2H) ? 'proses' : 'sukses';
+                $needsFulfillment = !$order->is_preorder
+                    && $order->product
+                    && (!empty($order->product->vps_server_id) || $isH2H);
+                $order->status = ($order->is_preorder || $needsFulfillment) ? 'proses' : 'sukses';
+                if ($needsFulfillment) {
+                    $order->fulfillment_stage = 'queued';
+                }
                 $order->save();
 
                 // Seller commissions replaced by role-based product discounts
@@ -219,31 +225,26 @@ class PaymentCallbackController extends Controller
                         return;
                     }
 
-                    // 1. VPS account creation via SSH
-                    if ($order->product && $order->product->vps_server_id && !$order->is_preorder) {
-                        try {
-                            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                            $order->save();
-                        } catch (\Exception $e) {
-                            Log::error("PaymentCallback: Failed to create VPS account for order {$order->id}: " . $e->getMessage());
-                        }
-                    }
-
-                    // 2. Escrow processing and seller notifications
+                    // 1. Escrow processing and seller notifications
                     try {
                         $order->processEscrowAndNotification();
                     } catch (\Exception $e) {
                         Log::error("PaymentCallback: Failed to process escrow/notification for order {$order->id}: " . $e->getMessage());
                     }
 
-                    // 3. Send order to Orderkuota API
+                    // 2. Pemenuhan pesanan bertahap (akun VPN -> penerusan ke penyedia layanan),
+                    //    tahapnya dipantau pembeli lewat halaman checkout secara real-time
                     if (!$order->is_preorder) {
                         try {
-                            app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
-                            $order->refresh();
-                        } catch (\Exception $e) {
-                            Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
+                            app(\App\Services\OrderFulfillmentService::class)->fulfill($order->id);
+                        } catch (\Throwable $e) {
+                            Log::error("PaymentCallback: Failed to fulfill order {$order->id}: " . $e->getMessage());
+                            $stuck = Order::with('product')->find($order->id);
+                            if ($stuck && $stuck->fulfillment_stage === 'queued') {
+                                $stuck->refundToBuyer('Terjadi kesalahan sistem saat memproses pesanan.', 'gagal');
+                            }
                         }
+                        $order = Order::with('product')->find($orderId) ?? $order;
                     } else {
                         try {
                             app(\App\Services\TelegramService::class)->sendAdminPreorderNotification($order);

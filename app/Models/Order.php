@@ -25,6 +25,7 @@ class Order extends Model
         'cost_price',
         'profit',
         'status',
+        'fulfillment_stage',
         'is_preorder',
         'payment_method',
         'qris_payload',
@@ -156,6 +157,21 @@ class Order extends Model
                 $locked->supplier_response = $reason;
             }
 
+            // Tandai tahap mana yang gagal (dipakai tampilan progres transaksi)
+            $currentStage = (string) $locked->fulfillment_stage;
+            if (in_array($currentStage, ['vpn', 'supplier'], true)) {
+                $locked->fulfillment_stage = 'failed_' . $currentStage;
+            } elseif (!str_starts_with($currentStage, 'failed')) {
+                $lockedProduct = $locked->product;
+                if ($lockedProduct && !empty($lockedProduct->orderkuota_product_code)) {
+                    $locked->fulfillment_stage = 'failed_supplier';
+                } elseif ($lockedProduct && !empty($lockedProduct->vps_server_id)) {
+                    $locked->fulfillment_stage = 'failed_vpn';
+                } else {
+                    $locked->fulfillment_stage = 'failed';
+                }
+            }
+
             // Deduct held balance from seller if applicable
             if (in_array($locked->escrow_status, ['held', 'disputed'])) {
                 $sellerId = $locked->product ? $locked->product->user_id : null;
@@ -219,19 +235,96 @@ class Order extends Model
     }
 
     /**
-     * Format supplier response for buyer display without leaking internal H2H balance figures.
+     * Alasan gagal yang aman ditampilkan ke pembeli:
+     * tidak membocorkan nama supplier, saldo H2H, kode produk, maupun detail teknis internal.
      */
     public function getBuyerSafeFailureReason(): string
     {
+        $generic = 'Pesanan tidak dapat diproses saat ini.';
         $raw = trim((string) ($this->supplier_response ?? ''));
         if ($raw === '') {
-            return 'Pesanan tidak dapat diproses oleh supplier.';
+            return $generic;
         }
 
-        // Remove internal H2H balance info like "Saldo 267.994 @10:57" or "Saldo 508.744 - 62.350 = 446.394"
-        $cleaned = preg_replace('/\.?\s*Saldo\s+[\d\.,\s\-=@:]+.*$/i', '', $raw);
-        $cleaned = preg_replace('/^(?:T#\d+\s+)?(?:R#ORD-[A-Z0-9-]+\s+)?/i', '', trim((string) $cleaned));
+        // Error operasional/internal (saldo H2H, kredensial, koneksi) -> pesan umum saja
+        if (preg_match('/saldo\s*(?:anda\s*)?(?:tidak\s*cukup|kurang|habis|minus|tidak\s*mencukupi)|\b(?:pin|password|member\s*id|ip|key|callback)\b.*(?:salah|tidak\s*terdaftar|tidak\s*diizinkan|ditolak|invalid)|timeout|koneksi|connection|curl|https?:/i', $raw)) {
+            return 'Layanan sedang mengalami gangguan sementara. Dana Anda aman, silakan coba lagi beberapa saat lagi.';
+        }
 
-        return trim((string) $cleaned, " .") ?: 'Pesanan tidak dapat diproses oleh supplier.';
+        // Buang info saldo internal, mis. "Saldo 267.994 @10:57" atau "Saldo 508.744 - 62.350 = 446.394"
+        $cleaned = trim((string) preg_replace('/\.?\s*Saldo\s+[\d\.,\s\-=@:]+.*$/i', '', $raw));
+        // Buang prefix referensi transaksi "T#123 R#ORD-XXXX"
+        $cleaned = trim((string) preg_replace('/^(?:T#\d+\s+)?(?:R#ORD-[A-Z0-9-]+\s+)?/i', '', $cleaned));
+
+        // Ambil keterangan setelah kata GAGAL (membuang nama produk/kode supplier di depannya)
+        if (preg_match('/\b(?:gagal|failed)\b[\.\:\-\s]*(.*)$/is', $cleaned, $m)) {
+            $cleaned = trim($m[1]);
+            if ($cleaned === '') {
+                return 'Pesanan ditolak oleh penyedia layanan.';
+            }
+        }
+
+        // Samarkan nama supplier bila sempat muncul
+        $cleaned = (string) preg_replace('/\b(?:okeconnect|oke\s*connect|orderkuota|order\s*kuota|h2h)\b/i', 'sistem', $cleaned);
+        $cleaned = trim($cleaned, " .");
+
+        if ($cleaned === '') {
+            return $generic;
+        }
+
+        return mb_strtoupper(mb_substr($cleaned, 0, 1)) . mb_substr($cleaned, 1);
+    }
+
+    /**
+     * Kelompok status untuk tampilan: success | failed | processing | pending | expired | cancelled | rejected | other
+     */
+    public function getStatusGroup(): string
+    {
+        return match (true) {
+            in_array($this->status, ['success', 'paid', 'sukses'], true) => 'success',
+            in_array($this->status, ['gagal', 'failed'], true) => 'failed',
+            $this->status === 'proses' => 'processing',
+            in_array($this->status, ['pending', 'pending_manual'], true) => 'pending',
+            $this->status === 'expired' => 'expired',
+            $this->status === 'dibatalkan' => 'cancelled',
+            in_array($this->status, ['rejected', 'ditolak'], true) => 'rejected',
+            default => 'other',
+        };
+    }
+
+    /**
+     * Data progres transaksi untuk halaman checkout (aman ditampilkan ke pembeli,
+     * tanpa informasi supplier).
+     */
+    public function toProgressPayload(): array
+    {
+        $this->loadMissing('product.category');
+        $product = $this->product;
+        $group = $this->getStatusGroup();
+
+        return [
+            'id' => $this->id,
+            'status' => $this->status,
+            'group' => $group,
+            'stage' => $this->fulfillment_stage,
+            'preorder' => (bool) $this->is_preorder,
+            'refunded' => $this->refunded_at !== null,
+            'reason' => $group === 'failed' ? $this->getBuyerSafeFailureReason() : null,
+            'sn' => $this->sn,
+            'date' => $this->created_at ? $this->created_at->format('d/m/Y H:i') : '-',
+            'category' => ($product && $product->category) ? $product->category->name : '-',
+            'product_name' => $product->name ?? 'Produk',
+            'email' => $this->email_or_whatsapp,
+            'phone' => $this->target_phone,
+            'total_amount' => (int) $this->total_amount,
+            'formatted_total' => 'Rp ' . number_format((int) $this->total_amount, 0, ',', '.'),
+            'payment_method' => $this->payment_method,
+            'steps' => [
+                'vpn' => (bool) ($product && !empty($product->vps_server_id)),
+                'supplier' => (bool) ($product && !empty($product->orderkuota_product_code)),
+            ],
+            'vpn_config' => $group === 'success' ? $this->vpn_config : null,
+            'success_instruction' => ($group === 'success' && $product) ? $product->success_instruction : null,
+        ];
     }
 }

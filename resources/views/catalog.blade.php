@@ -22,6 +22,21 @@
     .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #64748b;
     }
+    /* Progress card step animation */
+    @keyframes progressFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .progress-step-animate {
+        animation: progressFadeIn 0.4s ease-out forwards;
+    }
+    @keyframes progressPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    .progress-status-pulse {
+        animation: progressPulse 2s ease-in-out infinite;
+    }
 </style>
 <div class="space-y-8">
     
@@ -376,6 +391,18 @@
             <div class="flex items-center justify-center space-x-3 text-sm text-slate-400 dark:text-slate-500">
                 <svg class="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 <span>Mencocokkan mutasi otomatis...</span>
+            </div>
+
+            <!-- QRIS Action Buttons -->
+            <div id="qrisActionButtons" class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button onclick="checkPaymentStatus()" id="btnCheckPayment" class="flex-1 flex items-center justify-center space-x-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-bold transition shadow-lg shadow-emerald-500/20">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Cek Status Pembayaran</span>
+                </button>
+                <button onclick="cancelOrder()" id="btnCancelOrder" class="flex-1 flex items-center justify-center space-x-2 py-3 px-4 bg-white hover:bg-rose-50 dark:bg-slate-900 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-2xl text-sm font-bold transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    <span>Batalkan Pesanan</span>
+                </button>
             </div>
         </div>
 

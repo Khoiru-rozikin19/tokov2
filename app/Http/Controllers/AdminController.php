@@ -700,6 +700,7 @@ class AdminController extends Controller
         $sn = trim((string) $request->input('sn', ''));
         $updateData = [
             'status' => 'sukses',
+            'fulfillment_stage' => 'done',
             'is_preorder' => false,
         ];
         if ($sn !== '') {
