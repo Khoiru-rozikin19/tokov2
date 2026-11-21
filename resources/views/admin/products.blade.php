@@ -198,18 +198,24 @@
                 <!-- Right: Category Specific Action Buttons -->
                 <div class="flex flex-wrap items-center gap-2.5">
                     @if($catType === 'kuota_xl')
-                        <a href="{{ route('tools.xl.index') }}" class="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-2xl text-xs font-bold transition">
+                        @if(auth()->user()->role === 'admin' && Route::has('admin.tools.xl.index'))
+                        <a href="{{ route('admin.tools.xl.index') }}" class="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-2xl text-xs font-bold transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"></path></svg>
                             <span>Buka Tools XL</span>
                         </a>
+                        @endif
                     @elseif($catType === 'digital')
+                        @if(Route::has('admin.account_stocks'))
                         <a href="{{ route('admin.account_stocks') }}" class="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-xs font-bold transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"></path></svg>
                             <span>Kelola Stok Akun</span>
                         </a>
+                        @endif
+                        @if(auth()->user()->role === 'admin' && Route::has('admin.vpn_panel'))
                         <a href="{{ route('admin.vpn_panel') }}" class="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-bold transition">
                             <span>VPN Panel</span>
                         </a>
+                        @endif
                     @endif
 
                     @if(auth()->user()->role === 'admin' && in_array($catType, ['kuota_xl', 'pln']))
@@ -391,9 +397,9 @@
                                         @if($product->vpsServer)
                                             <span class="font-mono font-semibold text-blue-600 dark:text-blue-400 block">{{ $product->vpsServer->name }}</span>
                                             <span class="text-[10px] text-slate-400">Otomatisasi SSH</span>
-                                        @elseif($product->stocks()->where('status', 'ready')->exists())
+                                        @elseif($product->stocks && $product->stocks->where('status', 'ready')->isNotEmpty())
                                             <span class="font-semibold text-emerald-600 dark:text-emerald-400 block">Stok Akun Dinamis</span>
-                                            <span class="text-[10px] text-slate-400">{{ $product->stocks()->where('status', 'ready')->count() }} akun ready</span>
+                                            <span class="text-[10px] text-slate-400">{{ $product->stocks->where('status', 'ready')->count() }} akun ready</span>
                                         @else
                                             <span class="text-slate-400">Manual / Template</span>
                                         @endif

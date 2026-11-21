@@ -17,13 +17,13 @@ class Category extends Model
      * Get normalized category type (kuota_xl, pln, digital, general).
      * Falls back to smart keyword detection from name if type is not explicitly set.
      */
-    public function getTypeAttribute(?string $value): string
+    public function getTypeAttribute(?string $value = null): string
     {
         if (!empty($value)) {
             return $value;
         }
 
-        $lower = strtolower((string) $this->name);
+        $lower = strtolower((string) ($this->name ?? ''));
         if (str_contains($lower, 'pln') || str_contains($lower, 'token') || str_contains($lower, 'listrik')) {
             return 'pln';
         }
