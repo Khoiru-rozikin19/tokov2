@@ -630,6 +630,14 @@ class CatalogController extends Controller
         $order = Order::findOrFail($id);
         $user = auth()->user();
 
+        // Only the order owner can check
+        if ($order->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk memeriksa pesanan ini.',
+            ], 403);
+        }
+
         // Rate limit: once per 30 seconds per order
         $cacheKey = "check_payment:{$order->id}";
         if (Cache::has($cacheKey)) {
@@ -644,7 +652,12 @@ class CatalogController extends Controller
         // Send Telegram notification to admin
         try {
             $formattedAmount = number_format($order->total_amount, 0, ',', '.');
-            $message = "👀 User {$user->email} sedang menunggu konfirmasi pembayaran untuk pesanan {$order->id} (Rp {$formattedAmount})";
+            $customer = $order->email_or_whatsapp ?: ($user->email ?: $user->phone);
+            $message = "👀 *Pengecekan Status Pembayaran*\n\n"
+                     . "📦 *Order ID:* `{$order->id}`\n"
+                     . "👤 *Pelanggan:* {$customer}\n"
+                     . "💰 *Nominal:* Rp {$formattedAmount}\n\n"
+                     . "Pelanggan sedang mengecek status pembayaran di halaman katalog.";
             $this->telegramService->sendMessage(
                 env('TELEGRAM_ADMIN_ID') ?: config('services.telegram.admin_id', '6515967618'),
                 $message

@@ -321,6 +321,9 @@ class TelegramWebhookController extends Controller
                 // Update order status to paid (H2H stays 'proses' until OKEConnect confirms)
                 $isH2H = $order->product && !empty($order->product->orderkuota_product_code);
                 $order->status = ($order->is_preorder || $isH2H) ? 'proses' : 'sukses';
+                if (!$order->is_preorder) {
+                    $order->fulfillment_stage = $isH2H ? 'supplier' : 'done';
+                }
                 $order->save();
                 $order->processEscrowAndNotification();
 
@@ -341,6 +344,10 @@ class TelegramWebhookController extends Controller
                 if (!$order->is_preorder) {
                     $this->orderkuotaService->prosesTransaksiPulsa($order->id);
                     $order->refresh();
+                    if ($order->status === 'sukses') {
+                        $order->fulfillment_stage = 'done';
+                        $order->save();
+                    }
                 }
 
                 // Acknowledge Telegram callback query

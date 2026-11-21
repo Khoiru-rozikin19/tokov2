@@ -481,6 +481,126 @@
             </div>
         </div>
 
+        <!-- ANIMATED PROGRESS CARD STATE -->
+        <div id="modalStepProgress" class="hidden space-y-5">
+            <!-- Status Badge + Header -->
+            <div class="text-center space-y-2">
+                <span id="progressStatusBadge" class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 animate-pulse">
+                    ⏳ Sedang Diproses
+                </span>
+                <h3 id="progressTitle" class="text-xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Memproses Pesanan...</h3>
+                <p id="progressOrderId" class="text-xs font-mono text-slate-400 dark:text-slate-500"></p>
+            </div>
+
+            <!-- Transaction Info Card -->
+            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2.5">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div>
+                        <span class="text-slate-400 dark:text-slate-500 block">Tanggal</span>
+                        <span id="progressDate" class="font-semibold text-slate-700 dark:text-slate-200">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 dark:text-slate-500 block">Kategori</span>
+                        <span id="progressCategory" class="font-semibold text-slate-700 dark:text-slate-200">-</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-slate-400 dark:text-slate-500 block">Produk</span>
+                        <span id="progressProductName" class="font-semibold text-slate-700 dark:text-slate-200">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 dark:text-slate-500 block">Email</span>
+                        <span id="progressEmail" class="font-semibold text-slate-700 dark:text-slate-200 truncate block">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 dark:text-slate-500 block">Nomor HP</span>
+                        <span id="progressPhone" class="font-semibold text-slate-700 dark:text-slate-200">-</span>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <span class="text-xs text-slate-400 dark:text-slate-500">Total Pembayaran</span>
+                    <span id="progressTotal" class="text-base font-extrabold text-blue-600 dark:text-blue-400">Rp 0</span>
+                </div>
+            </div>
+
+            <!-- Animated Progress Steps -->
+            <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-0">
+                <div id="progressSteps" class="space-y-0">
+                    <!-- Step 1: Verifikasi Pembayaran (always present) -->
+                    <div id="stepPayment" class="flex items-center space-x-3 py-3 border-b border-slate-100 dark:border-slate-800">
+                        <div id="stepPaymentIcon" class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Memverifikasi Pembayaran</span>
+                            <span id="stepPaymentStatus" class="block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Selesai</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: VPN (conditional) -->
+                    <div id="stepVpn" class="hidden flex items-center space-x-3 py-3 border-b border-slate-100 dark:border-slate-800">
+                        <div id="stepVpnIcon" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Sedang Membuat Akun VPN</span>
+                            <span id="stepVpnStatus" class="block text-[10px] text-slate-400 dark:text-slate-500 font-medium">Menunggu...</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Supplier (conditional) -->
+                    <div id="stepSupplier" class="hidden flex items-center space-x-3 py-3">
+                        <div id="stepSupplierIcon" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span id="stepSupplierTitle" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Sedang Memeriksa Nomor HP</span>
+                            <span id="stepSupplierStatus" class="block text-[10px] text-slate-400 dark:text-slate-500 font-medium">Menunggu...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Section (shown when done/failed) -->
+            <div id="progressResult" class="hidden space-y-4">
+                <!-- Success result -->
+                <div id="progressResultSuccess" class="hidden">
+                    <div id="progressSnContainer" class="hidden p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl text-center">
+                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block">Serial Number</span>
+                        <span id="progressSn" class="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 select-all"></span>
+                    </div>
+                    <div id="progressVpnConfig" class="hidden"></div>
+                    <div id="progressSuccessInstruction" class="hidden p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-left">
+                        <span class="text-xs text-emerald-700 dark:text-emerald-400 font-bold block uppercase tracking-wider mb-1">Informasi Pesanan:</span>
+                        <div id="progressSuccessInstructionText" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
+                    </div>
+                </div>
+
+                <!-- Failed result -->
+                <div id="progressResultFailed" class="hidden space-y-3">
+                    <div class="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-2xl text-left">
+                        <span class="text-xs font-bold text-rose-600 dark:text-rose-400 block mb-1">Penyebab Gagal:</span>
+                        <p id="progressFailReason" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+                    </div>
+                    <div id="progressRefundBadge" class="hidden p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-center justify-center space-x-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        <span>↩️</span>
+                        <span>Saldo Anda telah dikembalikan otomatis ke akun.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div id="progressFooter" class="hidden pt-2">
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" onclick="retryFromProgressModal()" id="progressBtnRetry" class="hidden py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs sm:text-sm transition shadow-lg shadow-blue-500/20">
+                        Coba Lagi
+                    </button>
+                    <button type="button" onclick="closeModal()" id="progressBtnClose" class="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm transition shadow-lg shadow-blue-500/20 col-span-2">
+                        Lanjut Belanja
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -512,6 +632,8 @@
     let pollInterval = null;
     let countdownInterval = null;
     let currentRawAmount = 0;
+    let progressPollInterval = null;
+    let checkPaymentCooldown = false;
 
     // Open detail modal
     function openDetailModal(name, price, duration, description, normalPrice, discountAmount) {
@@ -639,6 +761,7 @@
         document.getElementById('modalStepSuccess').classList.add('hidden');
         document.getElementById('modalStepExpired').classList.add('hidden');
         document.getElementById('modalStepFailed').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.add('hidden');
         const inputErr = document.getElementById('purchaseInputError');
         if (inputErr) {
             inputErr.classList.add('hidden');
@@ -680,6 +803,8 @@
 
     function closeModal() {
         document.getElementById('purchaseModal').classList.add('hidden');
+        const progressEl = document.getElementById('modalStepProgress');
+        if (progressEl) progressEl.classList.add('hidden');
         resetOrderTracker();
 
         // Bersihkan kolom nomor HP tujuan & nama pre-order saat modal ditutup
@@ -741,6 +866,10 @@
         activeOrderId = null;
         if (pollInterval) clearInterval(pollInterval);
         if (countdownInterval) clearInterval(countdownInterval);
+        if (progressPollInterval) {
+            clearInterval(progressPollInterval);
+            progressPollInterval = null;
+        }
     }
 
     // Submit purchase form via AJAX
@@ -805,11 +934,16 @@
             if (data.success) {
                 if (data.payment_method === 'balance') {
                     document.getElementById('modalStepInput').classList.add('hidden');
-                    document.getElementById('modalStepSuccess').classList.remove('hidden');
-                    populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id, data.order.status);
-                    if (data.order.status === 'proses') {
-                        activeOrderId = data.order.id;
-                        startPolling(false);
+                    if (data.deferred && data.progress) {
+                        // Show animated progress card for deferred fulfillment
+                        showProgressCard(data.progress);
+                    } else {
+                        document.getElementById('modalStepSuccess').classList.remove('hidden');
+                        populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id, data.order.status);
+                        if (data.order.status === 'proses') {
+                            activeOrderId = data.order.id;
+                            startPolling(false);
+                        }
                     }
                 } else {
                     renderPaymentInstructions(data.order);
@@ -903,27 +1037,37 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
+                if (data.group === 'success') {
                     showSuccessState(data.vpn_config, data.success_instruction, data.status, data.sn);
                 } else if (data.status === 'proses') {
                     if (watchPayment) {
-                        const processingOrderId = activeOrderId;
-                        document.getElementById('modalStepPayment').classList.add('hidden');
-                        document.getElementById('modalStepSuccess').classList.remove('hidden');
-                        populateSuccessDetails(data.vpn_config, data.success_instruction, processingOrderId, 'proses', data.sn);
+                        // QRIS payment confirmed → transition to progress card if fulfillment is running
+                        if (data.stage && data.stage !== null && (data.steps?.vpn || data.steps?.supplier)) {
+                            document.getElementById('modalStepPayment').classList.add('hidden');
+                            showProgressCard(data);
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                        } else {
+                            const processingOrderId = activeOrderId;
+                            document.getElementById('modalStepPayment').classList.add('hidden');
+                            document.getElementById('modalStepSuccess').classList.remove('hidden');
+                            populateSuccessDetails(data.vpn_config, data.success_instruction, processingOrderId, 'proses', data.sn);
+                        }
                         watchPayment = false;
                     }
-                } else if (data.status === 'gagal' || data.status === 'failed') {
+                } else if (data.group === 'failed') {
                     showFailedRefundState(
                         data.refunded === true,
                         activeOrderId,
-                        data.refunded ? 'Pesanan gagal diproses oleh supplier. Dana Anda telah dikembalikan otomatis ke Saldo Akun.' : 'Pesanan gagal diproses oleh supplier. Silakan hubungi Admin untuk bantuan.',
+                        data.refunded ? 'Pesanan gagal diproses. Dana Anda telah dikembalikan otomatis ke Saldo Akun.' : 'Pesanan gagal diproses. Silakan hubungi Admin untuk bantuan.',
                         data.reason || ''
                     );
                 } else if (data.status === 'expired') {
                     showExpiredState();
                 } else if (data.status === 'ditolak' || data.status === 'rejected') {
                     showExpiredState();
+                } else if (data.status === 'dibatalkan') {
+                    showCancelledState();
                 }
             })
             .catch(err => console.error("Error polling order status:", err));
@@ -937,6 +1081,7 @@
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.add('hidden');
         document.getElementById('modalStepExpired').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.add('hidden');
         document.getElementById('modalStepFailed').classList.remove('hidden');
 
         const titleEl = document.getElementById('failedModalTitle');
@@ -1005,6 +1150,7 @@
         const completedOrderId = activeOrderId;
         resetOrderTracker();
         document.getElementById('modalStepPayment').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.remove('hidden');
         
         populateSuccessDetails(vpnConfig, successInstruction, completedOrderId, orderStatus, sn);
@@ -1213,7 +1359,17 @@
     function showExpiredState() {
         resetOrderTracker();
         document.getElementById('modalStepPayment').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.add('hidden');
         document.getElementById('modalStepExpired').classList.remove('hidden');
+    }
+
+    function showCancelledState() {
+        resetOrderTracker();
+        document.getElementById('modalStepPayment').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.add('hidden');
+        document.getElementById('modalStepExpired').classList.remove('hidden');
+        document.querySelector('#modalStepExpired h3').innerText = 'Pesanan Dibatalkan';
+        document.querySelector('#modalStepExpired p').innerText = 'Pesanan Anda telah berhasil dibatalkan.';
     }
 
     function copyAmount() {
@@ -1227,6 +1383,371 @@
         setTimeout(() => {
             btn.innerHTML = originalHtml;
         }, 1500);
+    }
+
+    // =====================================================
+    // PROGRESS CARD FUNCTIONS
+    // =====================================================
+
+    const SVG_CHECK = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>';
+    const SVG_SPINNER = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+    const SVG_CROSS = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>';
+
+    function showProgressCard(progressData) {
+        // Hide all other steps
+        document.getElementById('modalStepInput').classList.add('hidden');
+        document.getElementById('modalStepPayment').classList.add('hidden');
+        document.getElementById('modalStepSuccess').classList.add('hidden');
+        document.getElementById('modalStepExpired').classList.add('hidden');
+        document.getElementById('modalStepFailed').classList.add('hidden');
+        document.getElementById('modalStepProgress').classList.remove('hidden');
+
+        // Populate transaction info
+        document.getElementById('progressOrderId').innerText = 'ID Transaksi: ' + (progressData.id || '-');
+        document.getElementById('progressDate').innerText = progressData.date || '-';
+        document.getElementById('progressCategory').innerText = progressData.category || '-';
+        document.getElementById('progressProductName').innerText = progressData.product_name || '-';
+        document.getElementById('progressEmail').innerText = progressData.email || '-';
+        document.getElementById('progressPhone').innerText = progressData.phone || '-';
+        document.getElementById('progressTotal').innerText = progressData.formatted_total || 'Rp 0';
+
+        // Show/hide conditional steps
+        const stepVpn = document.getElementById('stepVpn');
+        const stepSupplier = document.getElementById('stepSupplier');
+
+        if (progressData.steps && progressData.steps.vpn) {
+            stepVpn.classList.remove('hidden');
+            stepVpn.classList.add('flex');
+        } else {
+            stepVpn.classList.add('hidden');
+            stepVpn.classList.remove('flex');
+        }
+
+        if (progressData.steps && progressData.steps.supplier) {
+            stepSupplier.classList.remove('hidden');
+            stepSupplier.classList.add('flex');
+            const supplierTitle = document.getElementById('stepSupplierTitle');
+            if (supplierTitle) {
+                supplierTitle.innerText = progressData.phone ? 'Sedang Memeriksa Nomor HP' : 'Sedang Memproses Pesanan';
+            }
+        } else {
+            stepSupplier.classList.add('hidden');
+            stepSupplier.classList.remove('flex');
+        }
+
+        // Hide result and footer initially
+        document.getElementById('progressResult').classList.add('hidden');
+        document.getElementById('progressResultSuccess').classList.add('hidden');
+        document.getElementById('progressResultFailed').classList.add('hidden');
+        document.getElementById('progressFooter').classList.add('hidden');
+
+        // Update the card with current stage
+        updateProgressCard(progressData);
+
+        // Start progress polling
+        activeOrderId = progressData.id;
+        startProgressPolling();
+    }
+
+    function updateProgressCard(data) {
+        const stage = data.stage || 'queued';
+        const group = data.group || 'processing';
+
+        // Update status badge
+        const badge = document.getElementById('progressStatusBadge');
+        const title = document.getElementById('progressTitle');
+
+        if (group === 'success') {
+            badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50';
+            badge.innerHTML = '✅ Berhasil';
+            title.innerText = 'Transaksi Berhasil!';
+        } else if (group === 'failed') {
+            badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50';
+            badge.innerHTML = '❌ Gagal';
+            title.innerText = 'Pesanan Gagal Diproses';
+        } else {
+            badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 animate-pulse';
+            badge.innerHTML = '⏳ Sedang Diproses';
+            title.innerText = 'Memproses Pesanan...';
+        }
+
+        // Update VPN step
+        if (data.steps && data.steps.vpn) {
+            updateStepIcon('stepVpn', stage, group, 'vpn', 'failed_vpn');
+        }
+
+        // Update Supplier step
+        if (data.steps && data.steps.supplier) {
+            updateStepIcon('stepSupplier', stage, group, 'supplier', 'failed_supplier');
+        }
+
+        // Show result section when done or failed
+        if (group === 'success' || group === 'failed') {
+            document.getElementById('progressResult').classList.remove('hidden');
+            document.getElementById('progressFooter').classList.remove('hidden');
+
+            if (group === 'success') {
+                document.getElementById('progressResultSuccess').classList.remove('hidden');
+                document.getElementById('progressResultFailed').classList.add('hidden');
+
+                // SN
+                if (data.sn) {
+                    document.getElementById('progressSnContainer').classList.remove('hidden');
+                    document.getElementById('progressSn').innerText = data.sn;
+                }
+
+                // VPN config
+                if (data.vpn_config) {
+                    const vpnDiv = document.getElementById('progressVpnConfig');
+                    vpnDiv.classList.remove('hidden');
+                    const trimmed = data.vpn_config.trim();
+                    const nodeMatch = trimmed.match(/(vmess|vless|trojan|ss|shadowsocks):\/\/[^\s"]+/i);
+                    if (nodeMatch) {
+                        vpnDiv.innerHTML = `
+                            <div class="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl space-y-3">
+                                <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block uppercase tracking-wider">Akun VPN:</span>
+                                <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
+                                    <textarea readonly class="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 resize-none h-16 custom-scrollbar">${escapeHtml(nodeMatch[0])}</textarea>
+                                </div>
+                                <button onclick="navigator.clipboard.writeText('${escapeHtml(nodeMatch[0]).replace(/'/g, "\\'")}'); this.innerText='Tersalin!'; setTimeout(()=>this.innerText='Salin Akun',2000)" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition">Salin Akun</button>
+                            </div>
+                        `;
+                    } else {
+                        vpnDiv.innerHTML = `
+                            <div class="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl">
+                                <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block uppercase tracking-wider mb-2">Konfigurasi VPN:</span>
+                                <a href="/orders/${data.id}/download" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    <span>Unduh Konfigurasi</span>
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Success instruction
+                if (data.success_instruction && data.success_instruction.trim()) {
+                    document.getElementById('progressSuccessInstruction').classList.remove('hidden');
+                    document.getElementById('progressSuccessInstructionText').innerText = data.success_instruction;
+                }
+
+                // Update close button
+                document.getElementById('progressBtnClose').innerText = 'Lanjut Belanja';
+                document.getElementById('progressBtnClose').classList.remove('col-span-1');
+                document.getElementById('progressBtnClose').classList.add('col-span-2');
+                document.getElementById('progressBtnRetry').classList.add('hidden');
+
+            } else if (group === 'failed') {
+                document.getElementById('progressResultFailed').classList.remove('hidden');
+                document.getElementById('progressResultSuccess').classList.add('hidden');
+                document.getElementById('progressFailReason').innerText = data.reason || 'Pesanan tidak dapat diproses saat ini.';
+
+                if (data.refunded) {
+                    document.getElementById('progressRefundBadge').classList.remove('hidden');
+                }
+
+                // Show retry + close
+                document.getElementById('progressBtnRetry').classList.remove('hidden');
+                document.getElementById('progressBtnClose').classList.remove('col-span-2');
+                document.getElementById('progressBtnClose').classList.add('col-span-1');
+                document.getElementById('progressBtnClose').innerText = 'Tutup';
+            }
+        }
+    }
+
+    function updateStepIcon(stepId, currentStage, group, activeStage, failedStage) {
+        const iconEl = document.getElementById(stepId + 'Icon');
+        const statusEl = document.getElementById(stepId + 'Status');
+        if (!iconEl || !statusEl) return;
+
+        // Determine order: queued < vpn < supplier < done
+        const stageOrder = { 'queued': 0, 'vpn': 1, 'supplier': 2, 'done': 3 };
+        const currentIdx = stageOrder[currentStage] ?? -1;
+        const activeIdx = stageOrder[activeStage] ?? -1;
+
+        if (currentStage === failedStage) {
+            // This step failed
+            iconEl.className = 'w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm';
+            iconEl.innerHTML = SVG_CROSS;
+            statusEl.innerText = 'Gagal';
+            statusEl.className = 'block text-[10px] text-rose-600 dark:text-rose-400 font-medium';
+        } else if (currentIdx > activeIdx || group === 'success') {
+            // This step completed
+            iconEl.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm';
+            iconEl.innerHTML = SVG_CHECK;
+            statusEl.innerText = 'Selesai';
+            statusEl.className = 'block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium';
+        } else if (currentStage === activeStage) {
+            // This step is running
+            iconEl.className = 'w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm';
+            iconEl.innerHTML = SVG_SPINNER;
+            statusEl.innerText = 'Sedang diproses...';
+            statusEl.className = 'block text-[10px] text-blue-600 dark:text-blue-400 font-medium';
+        } else {
+            // This step is waiting
+            iconEl.className = 'w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-400 flex items-center justify-center flex-shrink-0';
+            iconEl.innerHTML = SVG_SPINNER;
+            statusEl.innerText = 'Menunggu...';
+            statusEl.className = 'block text-[10px] text-slate-400 dark:text-slate-500 font-medium';
+        }
+    }
+
+    function startProgressPolling() {
+        if (progressPollInterval) clearInterval(progressPollInterval);
+
+        progressPollInterval = setInterval(() => {
+            if (!activeOrderId) return;
+
+            fetch(`/orders/${activeOrderId}/status`)
+            .then(res => res.json())
+            .then(data => {
+                updateProgressCard(data);
+
+                if (data.group === 'success' || data.group === 'failed') {
+                    clearInterval(progressPollInterval);
+                    progressPollInterval = null;
+                }
+            })
+            .catch(err => console.error("Error polling progress:", err));
+        }, 2000); // Poll every 2 seconds
+    }
+
+    function retryFromProgressModal() {
+        if (progressPollInterval) clearInterval(progressPollInterval);
+        progressPollInterval = null;
+        document.getElementById('modalStepProgress').classList.add('hidden');
+        document.getElementById('modalStepInput').classList.remove('hidden');
+
+        // Reset progress card state
+        document.getElementById('progressResult').classList.add('hidden');
+        document.getElementById('progressFooter').classList.add('hidden');
+        document.getElementById('progressResultSuccess').classList.add('hidden');
+        document.getElementById('progressResultFailed').classList.add('hidden');
+        document.getElementById('progressRefundBadge').classList.add('hidden');
+        document.getElementById('progressSnContainer').classList.add('hidden');
+        document.getElementById('progressVpnConfig').classList.add('hidden');
+        document.getElementById('progressVpnConfig').innerHTML = '';
+        document.getElementById('progressSuccessInstruction').classList.add('hidden');
+
+        // Refresh balance
+        const balanceText = document.getElementById('checkoutUserBalanceText');
+        const balanceInput = document.querySelector('input[name="payment_method"][value="balance"]');
+        const balanceLabel = document.getElementById('payMethodBalanceLabel');
+        if (balanceText && currentBuyPricing) {
+            fetch('/api/balance')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentUserBalance = data.balance;
+                        balanceText.innerText = data.formatted_balance;
+                        if (balanceInput && balanceLabel && data.balance >= currentBuyPricing.priceBalance) {
+                            balanceInput.disabled = false;
+                            balanceLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+    }
+
+    // =====================================================
+    // QRIS ACTION FUNCTIONS
+    // =====================================================
+
+    function checkPaymentStatus() {
+        if (!activeOrderId || checkPaymentCooldown) return;
+
+        const btn = document.getElementById('btnCheckPayment');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Sedang mengecek...</span>';
+        checkPaymentCooldown = true;
+
+        fetch(`/orders/${activeOrderId}/check-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success === false) {
+                // Rate limited
+                btn.innerHTML = '<span>⏳ Tunggu 30 detik...</span>';
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    checkPaymentCooldown = false;
+                }, 30000);
+                return;
+            }
+
+            if (data.group === 'processing' || data.group === 'success') {
+                // Payment confirmed! Transition to progress card
+                if (data.stage && (data.steps?.vpn || data.steps?.supplier)) {
+                    document.getElementById('modalStepPayment').classList.add('hidden');
+                    if (pollInterval) clearInterval(pollInterval);
+                    if (countdownInterval) clearInterval(countdownInterval);
+                    showProgressCard(data);
+                } else if (data.group === 'success') {
+                    showSuccessState(data.vpn_config, data.success_instruction, data.status, data.sn);
+                } else {
+                    document.getElementById('modalStepPayment').classList.add('hidden');
+                    document.getElementById('modalStepSuccess').classList.remove('hidden');
+                    populateSuccessDetails(data.vpn_config, data.success_instruction, data.id, 'proses', data.sn);
+                }
+                return;
+            }
+
+            // Not confirmed yet
+            btn.innerHTML = '<span>Pembayaran belum dikonfirmasi</span>';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                checkPaymentCooldown = false;
+            }, 30000);
+        })
+        .catch(err => {
+            console.error('Check payment error:', err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            checkPaymentCooldown = false;
+        });
+    }
+
+    function cancelOrder() {
+        if (!activeOrderId) return;
+
+        const btn = document.getElementById('btnCancelOrder');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span>Membatalkan...</span>';
+
+        fetch(`/orders/${activeOrderId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCancelledState();
+            } else {
+                btn.innerHTML = `<span class="text-xs">${escapeHtml(data.message || 'Gagal membatalkan')}</span>`;
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }, 5000);
+            }
+        })
+        .catch(err => {
+            console.error('Cancel order error:', err);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
     }
 </script>
 @endsection
