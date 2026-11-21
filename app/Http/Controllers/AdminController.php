@@ -300,19 +300,56 @@ class AdminController extends Controller
     /**
      * Display products page (CRUD).
      */
-    public function products()
+    public function products(Request $request)
     {
         $user = auth()->user();
-        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
+        $categories = \App\Models\Category::withCount(['products'])->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $vpsServers = \App\Models\VpsServer::orderBy('name', 'asc')->get();
-        if ($user->role === 'admin') {
-            $products = Product::with(['seller', 'category', 'vpsServer', 'stocks'])->orderBy('created_at', 'desc')->get();
-            $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
-        } else {
-            $products = Product::with(['category', 'vpsServer', 'stocks'])->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
-            $sellers = collect();
+
+        $selectedCategory = null;
+        if ($request->filled('category_id')) {
+            if ($request->category_id === 'uncategorized') {
+                $uncatCount = Product::whereNull('category_id')
+                    ->when($user->role !== 'admin', fn($q) => $q->where('user_id', $user->id))
+                    ->count();
+                $selectedCategory = (object) [
+                    'id' => 'uncategorized',
+                    'name' => 'Tanpa Kategori',
+                    'type' => 'general',
+                    'type_label' => 'Produk Tanpa Kategori',
+                    'type_badge' => 'Umum',
+                    'image_path' => null,
+                    'products_count' => $uncatCount,
+                ];
+            } else {
+                $selectedCategory = $categories->firstWhere('id', (int) $request->category_id);
+            }
         }
-        return view('admin.products', compact('products', 'sellers', 'categories', 'vpsServers'));
+
+        $query = Product::with(['seller', 'category', 'vpsServer', 'stocks']);
+        if ($user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+            $sellers = collect();
+        } else {
+            $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
+        }
+
+        if ($selectedCategory) {
+            if ($selectedCategory->id === 'uncategorized') {
+                $query->whereNull('category_id');
+            } else {
+                $query->where('category_id', $selectedCategory->id);
+            }
+        }
+
+        $products = $query->orderBy('created_at', 'desc')->get();
+
+        // Hitung produk tanpa kategori untuk ditampilkan di card view awal jika ada
+        $uncategorizedCount = Product::whereNull('category_id')
+            ->when($user->role !== 'admin', fn($q) => $q->where('user_id', $user->id))
+            ->count();
+
+        return view('admin.products', compact('products', 'sellers', 'categories', 'vpsServers', 'selectedCategory', 'uncategorizedCount'));
     }
 
     /**
@@ -1031,6 +1068,7 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:50|unique:categories,name',
+            'type' => 'nullable|string|max:50',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
 
@@ -1041,6 +1079,7 @@ class AdminController extends Controller
 
         \App\Models\Category::create([
             'name' => $request->name,
+            'type' => $request->input('type'),
             'image_path' => $imagePath,
         ]);
 
@@ -1065,11 +1104,16 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'nullable|string|max:50|unique:categories,name,' . $category->id,
+            'type' => 'nullable|string|max:50',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
         ]);
 
         if ($request->filled('name')) {
             $category->name = trim($request->name);
+        }
+
+        if ($request->has('type')) {
+            $category->type = $request->input('type');
         }
 
         if ($request->hasFile('image')) {
