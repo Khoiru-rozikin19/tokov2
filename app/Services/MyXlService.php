@@ -100,6 +100,15 @@ class MyXlService
         $url = $baseCiam . '/realms/xl-ciam/auth/otp';
 
         $basicAuth = $this->cfg('basic_auth', '');
+        $axFpKey = $this->cfg('ax_fp_key', '');
+
+        if (empty($basicAuth) || empty($axFpKey)) {
+            return [
+                'success' => false,
+                'message' => 'Parameter API MyXL belum lengkap (BASIC_AUTH atau AX_FP_KEY masih kosong). Silakan isi kredensial di tab "Pengaturan API", gunakan tab "Input Token Manual", atau aktifkan "Mode Simulasi".',
+            ];
+        }
+
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
         $axFp = $this->getAxFingerprint();
 
@@ -143,9 +152,19 @@ class MyXlService
                 ];
             }
 
+            $err = $response->json('error');
+            $errDesc = $response->json('error_description');
+
+            if ($err === 'unknown_error') {
+                return [
+                    'success' => false,
+                    'message' => 'Server XL menolak permintaan (unknown_error). Kredensial BASIC_AUTH / AX_FP_KEY di Pengaturan API mungkin belum sesuai/kedaluwarsa, atau nomor terkena limit pengiriman SMS OTP. Anda juga dapat login langsung lewat tab "Input Token Manual".',
+                ];
+            }
+
             return [
                 'success' => false,
-                'message' => 'Gagal request OTP: ' . ($response->json('error') ?? $response->body())
+                'message' => 'Gagal request OTP: ' . ($err ? ($err . ($errDesc ? " ({$errDesc})" : '')) : $response->body())
             ];
         } catch (\Exception $e) {
             Log::error('MyXL Request OTP Error: ' . $e->getMessage());
@@ -182,9 +201,18 @@ class MyXlService
         $url = $baseCiam . '/realms/xl-ciam/protocol/openid-connect/token';
 
         $basicAuth = $this->cfg('basic_auth', '');
+        $axFpKey = $this->cfg('ax_fp_key', '');
+        $axApiSigKey = $this->cfg('ax_api_sig_key', '');
+
+        if (empty($basicAuth) || empty($axFpKey) || empty($axApiSigKey)) {
+            return [
+                'success' => false,
+                'message' => 'Parameter API MyXL belum lengkap (BASIC_AUTH, AX_FP_KEY, atau AX_API_SIG_KEY masih kosong). Silakan isi kredensial di tab "Pengaturan API", gunakan tab "Input Token Manual", atau aktifkan "Mode Simulasi".',
+            ];
+        }
+
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
         $axFp = $this->getAxFingerprint();
-        $axApiSigKey = $this->cfg('ax_api_sig_key', '');
         $apiKey = $this->cfg('api_key', '');
 
         $now = now()->setTimezone('Asia/Jakarta');
@@ -261,9 +289,26 @@ class MyXlService
 
             $rawBody = $response->body();
             Log::error("MyXL verifyOtp failed. Status: " . $response->status() . " Body: " . $rawBody);
+
+            $err = $response->json('error');
+            $errDesc = $response->json('error_description');
+
+            if ($err === 'unknown_error') {
+                return [
+                    'success' => false,
+                    'message' => 'Server XL menolak verifikasi (unknown_error). Kredensial AX_API_SIG_KEY atau BASIC_AUTH mungkin tidak valid/kedaluwarsa. Anda dapat langsung menghubungkan akun via tab "Input Token Manual".',
+                ];
+            }
+            if ($err === 'invalid_grant') {
+                return [
+                    'success' => false,
+                    'message' => 'Kode OTP SMS salah atau sudah kedaluwarsa. Silakan periksa kembali SMS dari XL.',
+                ];
+            }
+
             return [
                 'success' => false,
-                'message' => 'Verifikasi OTP gagal: ' . ($response->json('error_description') ?? $response->json('error') ?? $rawBody)
+                'message' => 'Verifikasi OTP gagal: ' . ($errDesc ?? $err ?? $rawBody)
             ];
         } catch (\Exception $e) {
             Log::error('MyXL Verify OTP Error: ' . $e->getMessage());

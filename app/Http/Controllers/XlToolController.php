@@ -264,6 +264,103 @@ class XlToolController extends Controller
     }
 
     /**
+     * Store session directly using Refresh Token or Session JSON (without SMS OTP).
+     */
+    public function storeDirectToken(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $request->validate([
+            'phone' => 'nullable|string|max:50',
+            'token' => 'required|string',
+            'label' => 'nullable|string|max:100',
+        ]);
+
+        $tokenInput = trim($request->token);
+        $accessToken = null;
+        $idToken = null;
+        $refreshToken = null;
+        $extractedPhone = null;
+
+        // Cek apakah input berupa JSON Session (misal export dari Termux / me-cli-sunset)
+        if (str_starts_with($tokenInput, '{') && str_ends_with($tokenInput, '}')) {
+            $parsed = json_decode($tokenInput, true);
+            if (is_array($parsed)) {
+                $accessToken = $parsed['access_token'] ?? ($parsed['accessToken'] ?? null);
+                $idToken = $parsed['id_token'] ?? ($parsed['idToken'] ?? null);
+                $refreshToken = $parsed['refresh_token'] ?? ($parsed['refreshToken'] ?? null);
+                $extractedPhone = $parsed['msisdn'] ?? ($parsed['phone'] ?? null);
+            }
+        }
+
+        if (!$refreshToken) {
+            // Input diperlakukan langsung sebagai refresh_token string
+            $refreshToken = $tokenInput;
+        }
+
+        $phoneInput = $request->phone ?: ($extractedPhone ?: '');
+        $msisdn = preg_replace('/[^0-9]/', '', $phoneInput);
+        if (str_starts_with($msisdn, '08')) {
+            $msisdn = '62' . substr($msisdn, 1);
+        }
+
+        // Siapkan token array
+        $tokens = [
+            'access_token' => $accessToken ?: 'temp_' . md5($refreshToken),
+            'id_token' => $idToken ?: 'temp_id_' . md5($refreshToken),
+            'refresh_token' => $refreshToken,
+        ];
+
+        // Jika access_token belum ada atau mode real API, coba refresh token untuk validasi & token terkini
+        if (!$accessToken && !$this->xlService->isSimulationMode()) {
+            $refreshed = $this->xlService->refreshToken($refreshToken);
+            if ($refreshed && !empty($refreshed['access_token'])) {
+                $tokens = $refreshed;
+            }
+        }
+
+        // Ambil profil untuk mendapatkan subscriber_id dan memvalidasi session
+        $profile = $this->xlService->getProfile($tokens);
+        $subscriberId = null;
+        $subscriptionType = 'PREPAID';
+
+        if ($profile && isset($profile['profile'])) {
+            $subscriberId = $profile['profile']['subscriber_id'] ?? null;
+            $subscriptionType = $profile['profile']['subscription_type'] ?? 'PREPAID';
+            if (!empty($profile['profile']['msisdn'])) {
+                $msisdn = $profile['profile']['msisdn'];
+            }
+        }
+
+        if (empty($msisdn)) {
+            $msisdn = '628' . rand(100000000, 999999999);
+        }
+
+        // Set semua sesi lain ke non-aktif
+        XlSession::query()->update(['is_active' => false]);
+
+        $session = XlSession::updateOrCreate(
+            ['msisdn' => $msisdn],
+            [
+                'label' => $request->label ?: 'Nomor XL ' . $msisdn,
+                'subscriber_id' => $subscriberId,
+                'subscription_type' => $subscriptionType,
+                'access_token' => $tokens['access_token'],
+                'id_token' => $tokens['id_token'] ?? '',
+                'refresh_token' => $tokens['refresh_token'],
+                'is_active' => true,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sesi berhasil disimpan dan diaktifkan untuk ' . $session->label,
+        ]);
+    }
+
+    /**
      * Delete session.
      */
     public function deleteSession($id)

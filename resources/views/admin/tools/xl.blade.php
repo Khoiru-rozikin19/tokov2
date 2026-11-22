@@ -603,20 +603,31 @@
 
 </div>
 
-<!-- ADD ACCOUNT MODAL (OTP POPUP) -->
+<!-- ADD ACCOUNT MODAL (OTP & MANUAL TOKEN POPUP) -->
 <div id="add-account-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/70 p-4 transition-all duration-300 hidden">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-5 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
         
         <button onclick="toggleModal('add-account-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        <div class="space-y-2">
+        <div class="space-y-1">
             <h3 class="text-lg font-bold text-slate-850 dark:text-slate-100">Tambah Akun XL Baru</h3>
-            <p class="text-xs text-slate-400 dark:text-slate-500">Gunakan OTP SMS untuk menghubungkan token otentikasi XL.</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">Hubungkan akun XL melalui OTP SMS atau input token langsung.</p>
         </div>
 
-        <div class="space-y-4">
+        <!-- Segmented Tab: SMS OTP vs Input Manual -->
+        <div class="flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+            <button type="button" id="tab-login-sms-btn" onclick="switchLoginMode('sms')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm">
+                OTP SMS
+            </button>
+            <button type="button" id="tab-login-direct-btn" onclick="switchLoginMode('direct')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                Input Token Manual
+            </button>
+        </div>
+
+        <!-- Form Mode: SMS OTP -->
+        <div id="login-sms-container" class="space-y-4">
             <div>
                 <label for="otp_phone" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nomor HP XL</label>
                 <input type="text" id="otp_phone" placeholder="Contoh: 087860356425" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
@@ -642,6 +653,38 @@
                 </button>
                 <button id="otp-verify-btn" onclick="verifyOtpRequest()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-emerald-500/10 transition-all duration-200 active:scale-98 hidden">
                     Verifikasi OTP
+                </button>
+            </div>
+        </div>
+
+        <!-- Form Mode: Input Token Manual (Direct) -->
+        <div id="login-direct-container" class="space-y-4 hidden">
+            <div class="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/30 rounded-2xl text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                <strong>Tips Bypass OTP:</strong> Anda dapat langsung menghubungkan akun dengan menempelkan <code>refresh_token</code> atau seluruh JSON sesi hasil login Termux / script <code>me-cli-sunset</code>.
+            </div>
+
+            <div>
+                <label for="direct_token" class="block text-xs font-bold text-slate-500 uppercase mb-2">Refresh Token atau JSON Session *</label>
+                <textarea id="direct_token" rows="4" placeholder="Paste refresh_token atau JSON session di sini...
+Contoh JSON: { &quot;refresh_token&quot;: &quot;eyJ...&quot; }" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-xs font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+            </div>
+
+            <div>
+                <label for="direct_phone" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nomor HP XL (Opsional jika ada di JSON)</label>
+                <input type="text" id="direct_phone" placeholder="Contoh: 087774346841" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div>
+                <label for="direct_label" class="block text-xs font-bold text-slate-500 uppercase mb-2">Label Akun (Opsional)</label>
+                <input type="text" id="direct_label" placeholder="Contoh: XL Kuota Utama" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div id="direct-token-error" class="hidden text-xs font-bold text-rose-500"></div>
+            <div id="direct-token-success" class="hidden text-xs font-bold text-emerald-500"></div>
+
+            <div class="pt-2">
+                <button id="direct-token-btn" onclick="sendDirectToken()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-emerald-500/10 transition-all duration-200 active:scale-98">
+                    Hubungkan Akun
                 </button>
             </div>
         </div>
@@ -884,6 +927,79 @@
             btn.disabled = false;
             btn.innerText = 'Verifikasi OTP';
             errDiv.innerText = 'Koneksi error. Silakan coba kembali.';
+            errDiv.classList.remove('hidden');
+        });
+    }
+
+    // Switch login modal mode (SMS OTP vs Direct Token)
+    function switchLoginMode(mode) {
+        const smsBtn = document.getElementById('tab-login-sms-btn');
+        const directBtn = document.getElementById('tab-login-direct-btn');
+        const smsContainer = document.getElementById('login-sms-container');
+        const directContainer = document.getElementById('login-direct-container');
+
+        if (mode === 'sms') {
+            smsContainer.classList.remove('hidden');
+            directContainer.classList.add('hidden');
+            smsBtn.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm';
+            directBtn.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+        } else {
+            smsContainer.classList.add('hidden');
+            directContainer.classList.remove('hidden');
+            directBtn.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm';
+            smsBtn.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+        }
+    }
+
+    // Direct token / JSON session submission
+    function sendDirectToken() {
+        const token = document.getElementById('direct_token').value.trim();
+        const phone = document.getElementById('direct_phone').value.trim();
+        const label = document.getElementById('direct_label').value.trim();
+        const errDiv = document.getElementById('direct-token-error');
+        const successDiv = document.getElementById('direct-token-success');
+        const btn = document.getElementById('direct-token-btn');
+
+        errDiv.classList.add('hidden');
+        successDiv.classList.add('hidden');
+
+        if (!token) {
+            errDiv.innerText = 'Refresh Token atau JSON Session tidak boleh kosong.';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Menghubungkan Akun...';
+
+        fetch("{{ route('admin.tools.xl.token.direct') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ token: token, phone: phone, label: label })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = 'Hubungkan Akun';
+            if (data.success) {
+                successDiv.innerText = data.message;
+                successDiv.classList.remove('hidden');
+                setTimeout(() => {
+                    toggleModal('add-account-modal');
+                    location.reload();
+                }, 1000);
+            } else {
+                errDiv.innerText = data.message || 'Gagal menghubungkan token.';
+                errDiv.classList.remove('hidden');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = 'Hubungkan Akun';
+            errDiv.innerText = 'Koneksi error. Silakan periksa format token dan coba kembali.';
             errDiv.classList.remove('hidden');
         });
     }

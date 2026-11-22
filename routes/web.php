@@ -147,6 +147,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
             Route::post('/active', [XlToolController::class, 'changeActiveSession'])->name('active');
             Route::post('/request-otp', [XlToolController::class, 'requestOtp'])->name('otp.request');
             Route::post('/verify-otp', [XlToolController::class, 'verifyOtp'])->name('otp.verify');
+            Route::post('/token-direct', [XlToolController::class, 'storeDirectToken'])->name('token.direct');
             Route::delete('/{id}', [XlToolController::class, 'deleteSession'])->name('delete');
             Route::post('/settings', [XlToolController::class, 'updateSettings'])->name('settings.update');
             Route::post('/purchase', [XlToolController::class, 'purchasePackage'])->name('purchase');
