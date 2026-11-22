@@ -222,33 +222,6 @@
                     </button>
                 </div>
             </div>
-
-            <!-- Specific Info Alert per Category -->
-            @if($catType === 'pln')
-                <div class="p-3.5 bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl text-amber-800 dark:text-amber-300 text-xs flex items-start space-x-2.5">
-                    <span class="text-base flex-shrink-0">⚡</span>
-                    <div class="space-y-0.5">
-                        <p class="font-bold">Informasi Produk TOKEN PLN:</p>
-                        <p class="text-amber-700 dark:text-amber-400 leading-relaxed">Target pengisian adalah 11-12 digit Nomor Meter / ID Pelanggan PLN. Kode token 20 digit otomatis didapat dari supplier dan ditampilkan ke pembeli. <em>Tips: Server PLN biasanya cut-off pemeliharaan harian pukul 23:00 - 01:00 WIB.</em></p>
-                    </div>
-                </div>
-            @elseif($catType === 'kuota_xl')
-                <div class="p-3.5 bg-indigo-50/80 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl text-indigo-800 dark:text-indigo-300 text-xs flex items-start space-x-2.5">
-                    <span class="text-base flex-shrink-0">📶</span>
-                    <div class="space-y-0.5">
-                        <p class="font-bold">Informasi Produk Kuota XL:</p>
-                        <p class="text-indigo-700 dark:text-indigo-400 leading-relaxed">Produk terhubung ke OKEConnect dengan target nomor HP pelanggan (08xxx). Anda juga dapat menggunakan <strong>Tools XL</strong> untuk tembak paket, cek paket aktif, atau unreg paket.</p>
-                    </div>
-                </div>
-            @elseif($catType === 'digital')
-                <div class="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-emerald-800 dark:text-emerald-300 text-xs flex items-start space-x-2.5">
-                    <span class="text-base flex-shrink-0">🌐</span>
-                    <div class="space-y-0.5">
-                        <p class="font-bold">Informasi Produk Digital & VPN:</p>
-                        <p class="text-emerald-700 dark:text-emerald-400 leading-relaxed">Dapat menggunakan <strong>Otomatisasi SSH VPS</strong> (akun dibuat instan di server VPS Anda) atau <strong>Stok Akun Siap Pakai</strong> (upload data akun/voucher secara bertahap).</p>
-                    </div>
-                </div>
-            @endif
         </div>
 
         <!-- Stats summary cards for this category -->
