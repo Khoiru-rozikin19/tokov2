@@ -44,27 +44,10 @@
                     <a href="{{ route('admin.products', ['category_id' => $category->id]) }}" class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 sm:p-5 flex items-center justify-between hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-sm relative overflow-hidden">
                         <!-- Left Info -->
                         <div class="flex-1 min-w-0 pr-4">
-                            <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <div class="mb-2">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
                                     {{ $category->products_count ?? 0 }} Produk
                                 </span>
-                                @if($cType === 'kuota_xl')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/40">
-                                        📶 Kuota XL (H2H)
-                                    </span>
-                                @elseif($cType === 'pln')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40">
-                                        ⚡ TOKEN PLN
-                                    </span>
-                                @elseif($cType === 'digital')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40">
-                                        🌐 Digital & VPN
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                        🏷️ Umum
-                                    </span>
-                                @endif
                             </div>
 
                             <h3 class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
