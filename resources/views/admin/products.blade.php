@@ -28,6 +28,10 @@
                         <span>Kelola Kategori</span>
                     </button>
                     @endif
+                    <button onclick="openCategoryCreateModal()" class="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
+                        <span>Tambah Produk</span>
+                    </button>
                 </div>
             </div>
 
@@ -521,17 +525,22 @@
 
         <div class="mb-5">
             <h3 class="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight" id="createModalHeaderTitle">Tambah Produk Baru</h3>
-            <div class="flex items-center space-x-2 mt-1">
-                <span class="text-xs font-semibold text-slate-400">Kategori:</span>
-                <span id="createCategoryBadge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
-                    -
-                </span>
-            </div>
+            <p class="text-xs text-slate-400 mt-1">Lengkapi informasi produk, kode supplier, atau server VPS di bawah ini.</p>
         </div>
 
         <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
-            <input type="hidden" id="create_category_id" name="category_id" value="">
+
+            <!-- Kategori Produk -->
+            <div>
+                <label for="create_category_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori Produk</label>
+                <select id="create_category_id" name="category_id" onchange="adaptFormToCategoryType('create', this.value)" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <option value="">-- Tanpa Kategori --</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
             <!-- Nama Produk -->
             <div>
@@ -943,18 +952,19 @@
     // Open create modal adapted to category
     function openCategoryCreateModal() {
         const catId = currentCategoryId === 'uncategorized' ? '' : currentCategoryId;
-        const catType = currentCategoryType;
-        const catName = currentCategoryName || 'Umum';
+        const catName = currentCategoryName || '';
 
-        document.getElementById('create_category_id').value = catId;
-        document.getElementById('createCategoryBadge').innerText = catName;
-        document.getElementById('createModalHeaderTitle').innerText = 'Tambah Produk: ' + catName;
+        const catSelect = document.getElementById('create_category_id');
+        if (catSelect) {
+            catSelect.value = catId;
+        }
+        document.getElementById('createModalHeaderTitle').innerText = catId && catName ? ('Tambah Produk: ' + catName) : 'Tambah Produk Baru';
 
         adaptFormToCategoryType('create', catId);
         toggleCreateModal(true);
     }
 
-    // Toggle form fields based on category type
+    // Toggle form presets based on category type
     function adaptFormToCategoryType(prefix, categoryId) {
         let type = 'general';
         if (categoryId && categoryTypes[categoryId]) {
@@ -968,31 +978,20 @@
         const groupDuration = document.getElementById(`${prefix}_group_duration`);
         const instructionField = document.getElementById(`${prefix}_success_instruction`);
 
-        if (type === 'kuota_xl') {
-            // Kuota XL: OKEConnect visible, VPS hidden, Duration visible
-            if (groupSupplier) groupSupplier.classList.remove('hidden');
-            if (groupVps) groupVps.classList.add('hidden');
-            if (groupDuration) groupDuration.classList.remove('hidden');
-        } else if (type === 'pln') {
-            // TOKEN PLN: OKEConnect visible, VPS hidden, Duration hidden (auto 365)
-            if (groupSupplier) groupSupplier.classList.remove('hidden');
-            if (groupVps) groupVps.classList.add('hidden');
-            if (groupDuration) groupDuration.classList.add('hidden');
+        // VPS Automation, Supplier Code, and Duration are ALWAYS accessible for all categories
+        if (groupVps) groupVps.classList.remove('hidden');
+        if (groupSupplier) groupSupplier.classList.remove('hidden');
+        if (groupDuration) groupDuration.classList.remove('hidden');
+
+        // Preset for TOKEN PLN
+        if (type === 'pln') {
             const durInput = document.getElementById(`${prefix}_duration`);
-            if (durInput && prefix === 'create') durInput.value = '365';
+            if (durInput && prefix === 'create' && (!durInput.value || durInput.value === '30')) {
+                durInput.value = '365';
+            }
             if (instructionField && prefix === 'create' && !instructionField.value.trim()) {
                 instructionField.value = 'Masukkan 20 digit nomor token listrik di atas ke meteran PLN Anda, lalu tekan tombol ENTER.';
             }
-        } else if (type === 'digital') {
-            // Digital / VPN: OKEConnect hidden, VPS visible, Duration visible
-            if (groupSupplier) groupSupplier.classList.add('hidden');
-            if (groupVps) groupVps.classList.remove('hidden');
-            if (groupDuration) groupDuration.classList.remove('hidden');
-        } else {
-            // General: show all cleanly
-            if (groupSupplier) groupSupplier.classList.remove('hidden');
-            if (groupVps) groupVps.classList.remove('hidden');
-            if (groupDuration) groupDuration.classList.remove('hidden');
         }
     }
 
